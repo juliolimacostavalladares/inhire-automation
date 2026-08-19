@@ -14,3 +14,11 @@ busca_vagas/vagas_final_prev.json
 ~$*.xlsx
 
 node_modules/
+.pnpm-store/
+.env
+.env.*
+!.env.example
+backend/dist/
+backend/coverage/
+frontend/dist/
+frontend/.vite/
