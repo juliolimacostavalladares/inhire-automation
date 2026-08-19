@@ -15,6 +15,7 @@ import { RunsModule } from "./runs/runs.module";
 import { SchedulerModule } from "./scheduler/scheduler.module";
 import { TenantsModule } from "./tenants/tenants.module";
 import { AuthModule } from "./auth/auth.module";
+import { ProfileModule } from "./profile/profile.module";
 
 @Module({
   imports: [
@@ -32,6 +33,7 @@ import { AuthModule } from "./auth/auth.module";
       }),
     }),
     AuthModule,
+    ProfileModule,
     ThrottlerModule.forRoot([{ ttl: 60_000, limit: 120 }]),
     PrismaModule,
     QueuesModule,

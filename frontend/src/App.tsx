@@ -16,6 +16,7 @@ import { CareerPage } from '@/pages/career-page'
 import { ApplicationsPage } from '@/pages/applications-page'
 import { RequireAuth } from '@/components/auth/require-auth'
 import { RegisterPage } from '@/pages/register-page'
+import { ProfileOnboardingPage } from '@/pages/profile-onboarding-page'
 
 function CandidateAuthRoutes() {
   return <RequireAuth><Outlet /></RequireAuth>
@@ -33,6 +34,9 @@ export default function App() {
         <Route path="/cadastro" element={<RegisterPage />} />
         <Route path="/vagas" element={<JobsSearchPage />} />
         <Route element={<CandidateAuthRoutes />}>
+          <Route path="/onboarding/perfil" element={<ProfileOnboardingPage />} />
+        </Route>
+        <Route element={<RequireAuth requireProfile />}>
           <Route path="/vagas/:id" element={<JobDetailsPage />} />
           <Route path="/minha-area" element={<FavoritesPage />} />
           <Route path="/minha-area/candidaturas" element={<ApplicationsPage />} />

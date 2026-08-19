@@ -8,6 +8,7 @@ import { InteractiveLoginHero } from '@/features/auth/interactive-login-hero'
 import { initialLoginAnimationState } from '@/features/auth/login-animation.types'
 import { RegisterForm } from '@/features/auth/register-form'
 import { useAuth } from '@/features/auth/use-auth'
+import { getProfile } from '@/features/profile/profile.api'
 
 export function RegisterPage() {
   const [animation, setAnimation] = useState(initialLoginAnimationState)
@@ -15,7 +16,8 @@ export function RegisterPage() {
   const { user } = useAuth()
 
   useEffect(() => {
-    if (user) navigate('/vagas', { replace: true })
+    if (!user) return
+    void getProfile().then((profile) => navigate(profile?.status === 'COMPLETE' ? '/vagas' : '/onboarding/perfil', { replace: true })).catch(() => navigate('/onboarding/perfil', { replace: true }))
   }, [navigate, user])
 
   return (

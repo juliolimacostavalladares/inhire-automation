@@ -8,6 +8,7 @@ import { InteractiveLoginHero } from '@/features/auth/interactive-login-hero'
 import { initialLoginAnimationState } from '@/features/auth/login-animation.types'
 import { LoginForm } from '@/features/auth/login-form'
 import { useAuth } from '@/features/auth/use-auth'
+import { getProfile } from '@/features/profile/profile.api'
 
 export function LoginPage() {
   const [loginAnimation, setLoginAnimation] = useState(initialLoginAnimationState)
@@ -17,8 +18,15 @@ export function LoginPage() {
 
   useEffect(() => {
     if (!user) return
-    const from = (location.state as { from?: string } | null)?.from
-    navigate(from && !from.startsWith('/backoffice') ? from : '/vagas', { replace: true })
+    let active = true
+    void getProfile().then((profile) => {
+      if (!active) return
+      const from = (location.state as { from?: string } | null)?.from
+      navigate(profile?.status === 'COMPLETE' && from && !from.startsWith('/backoffice') ? from : profile?.status === 'COMPLETE' ? '/vagas' : '/onboarding/perfil', { replace: true })
+    }).catch(() => {
+      if (active) navigate('/onboarding/perfil', { replace: true })
+    })
+    return () => { active = false }
   }, [location.state, navigate, user])
 
   return (

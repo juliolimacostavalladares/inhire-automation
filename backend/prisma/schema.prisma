@@ -49,6 +49,20 @@ enum UserRole {
   ADMIN
 }
 
+enum CandidateProfileStatus {
+  PENDING_IMPORT
+  PROCESSING
+  NEEDS_REVIEW
+  COMPLETE
+  FAILED
+}
+
+enum CandidateProfileSource {
+  LINKEDIN_PDF_UPLOAD
+  RESUME_UPLOAD
+  MANUAL
+}
+
 model User {
   id           String   @id @default(uuid()) @db.Uuid
   email        String   @unique @db.VarChar(254)
@@ -57,8 +71,42 @@ model User {
   role         UserRole @default(CANDIDATE)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+  candidateProfile CandidateProfile?
 
   @@index([role])
+}
+
+model CandidateProfile {
+  id                    String                 @id @default(uuid()) @db.Uuid
+  userId                String                 @unique @db.Uuid
+  status                CandidateProfileStatus @default(PENDING_IMPORT)
+  source                CandidateProfileSource?
+  linkedinProfileUrl    String?                @db.VarChar(500)
+  phone                 String?                @db.VarChar(40)
+  professionalTitle     String?                @db.VarChar(180)
+  professionalArea      String?                @db.VarChar(180)
+  seniority             String?                @db.VarChar(80)
+  location              String?                @db.VarChar(180)
+  country               String?                @db.VarChar(100)
+  workModalities        Json?
+  contractTypes         Json?
+  salaryExpectation     String?                @db.VarChar(100)
+  skills                Json?
+  summary               String?                @db.Text
+  experiences           Json?
+  education             Json?
+  alertsEnabled         Boolean                @default(true)
+  sourceFileName        String?                @db.VarChar(255)
+  sourceFileMime        String?                @db.VarChar(100)
+  sourceFileSize        Int?
+  extractedText         String?                @db.Text
+  sourceImportedAt      DateTime?
+  reviewedAt            DateTime?
+  createdAt             DateTime               @default(now())
+  updatedAt             DateTime               @updatedAt
+  user                  User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([status])
 }
 
 model Tenant {
