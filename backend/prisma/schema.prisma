@@ -72,6 +72,7 @@ model User {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
   candidateProfile CandidateProfile?
+  tailoredResumes  TailoredResume[]
 
   @@index([role])
 }
@@ -149,12 +150,33 @@ model Job {
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
   tenant          Tenant    @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  tailoredResumes TailoredResume[]
 
   @@unique([tenantId, externalId])
   @@index([status, lastSeenAt])
   @@index([tenantId, status])
   @@index([publishedAt])
   @@index([title])
+}
+
+model TailoredResume {
+  id                  String   @id @default(uuid()) @db.Uuid
+  userId              String   @db.Uuid
+  jobId               String   @db.Uuid
+  targetRole          String   @db.VarChar(255)
+  markdownContent     String   @db.Text
+  pdfBase64           String?  @db.Text
+  matchScore          Int?
+  summary             String?  @db.Text
+  highlightedKeywords Json?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  job                 Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, jobId])
+  @@index([userId])
+  @@index([jobId])
 }
 
 model CrawlRun {

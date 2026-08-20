@@ -6,6 +6,7 @@ import { Separator } from '@/components/ui/separator'
 import { CompanyLogo } from '@/components/brand/company-logo'
 import { cn } from '@/lib/utils'
 import type { Job } from './jobs.data'
+import { TailoredResumeCard } from './tailored-resume-card'
 
 interface JobDetailPanelProps {
   job: Job
@@ -84,7 +85,11 @@ export function JobDetailPanel({ job, detailError, favorite, onFavorite, onClose
             </div>
           )}
 
-          <section>
+          <div className="mt-6">
+            <TailoredResumeCard jobId={job.id} jobTitle={job.title} />
+          </div>
+
+          <section className="mt-7">
             <h3 className="text-sm font-extrabold">Sobre a vaga</h3>
             <article className="mt-3 text-sm leading-6 text-muted-foreground" dangerouslySetInnerHTML={{ __html: job.descriptionHtml ?? job.description }}></article>
           </section>
