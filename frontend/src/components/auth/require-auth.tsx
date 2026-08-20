@@ -14,17 +14,16 @@ export function RequireAuth({ children, role, requireProfile = false }: RequireA
   const location = useLocation()
   const { user, hydrate } = useAuth()
   const { profile, hydrate: hydrateProfile } = useProfileStore()
-  const [checking, setChecking] = useState(!user)
-  const [checkingProfile, setCheckingProfile] = useState(requireProfile && Boolean(user))
+  const [checkingAuth, setCheckingAuth] = useState(true)
+  const [checkingProfile, setCheckingProfile] = useState(requireProfile)
 
   useEffect(() => {
-    if (user) return
     let active = true
     void hydrate().finally(() => {
-      if (active) setChecking(false)
+      if (active) setCheckingAuth(false)
     })
     return () => { active = false }
-  }, [hydrate, user])
+  }, [hydrate])
 
   useEffect(() => {
     if (!requireProfile || !user || role === 'ADMIN') {
@@ -32,11 +31,13 @@ export function RequireAuth({ children, role, requireProfile = false }: RequireA
       return
     }
     let active = true
-    void hydrateProfile().finally(() => { if (active) setCheckingProfile(false) })
+    void hydrateProfile().finally(() => {
+      if (active) setCheckingProfile(false)
+    })
     return () => { active = false }
   }, [hydrateProfile, requireProfile, role, user])
 
-  if (checking || checkingProfile) {
+  if (checkingAuth || (requireProfile && checkingProfile)) {
     return <main className="grid min-h-svh place-items-center bg-canvas text-sm text-muted-foreground">Verificando sua sessão…</main>
   }
   if (!user) return <Navigate to="/login" replace state={{ from: location.pathname }} />

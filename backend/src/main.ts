@@ -19,12 +19,12 @@ async function bootstrap() {
     }),
   );
   const origins = config.get("corsOrigins", { infer: true });
-  if (origins.length)
-    app.enableCors({
-      origin: origins,
-      credentials: true,
-      methods: ["GET", "POST", "PATCH", "DELETE"],
-    });
+  app.enableCors({
+    origin: origins.length ? origins : ["http://localhost:5173", "http://127.0.0.1:5173"],
+    credentials: true,
+    methods: ["GET", "HEAD", "PUT", "PATCH", "POST", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Accept", "Authorization", "X-API-Key", "Origin", "DNT", "X-CustomHeader", "Keep-Alive", "User-Agent", "X-Requested-With", "If-Modified-Since", "Cache-Control"],
+  });
 
   const swaggerConfig = new DocumentBuilder()
     .setTitle("InHire Jobs API")
