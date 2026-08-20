@@ -1,7 +1,6 @@
 import { BriefcaseBusiness, LogIn, LogOut, Sparkles, UserRound } from 'lucide-react'
 import { NavLink } from 'react-router-dom'
 import { Logo } from '@/components/brand/logo'
-import { ThemeToggle } from '@/components/theme/theme-toggle'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/features/auth/use-auth'
 
@@ -54,7 +53,6 @@ export function CandidateTopbar() {
               <NavLink to="/login"><LogIn /> Entrar</NavLink>
             </Button>
           )}
-          <ThemeToggle />
         </div>
       </div>
     </header>

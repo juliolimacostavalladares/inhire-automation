@@ -1,7 +1,6 @@
 import { BriefcaseBusiness, UserRound } from 'lucide-react'
 import { NavLink } from 'react-router-dom'
 import { Logo } from '@/components/brand/logo'
-import { ThemeToggle } from '@/components/theme/theme-toggle'
 import { Button } from '@/components/ui/button'
 
 const navigation = [
@@ -36,9 +35,6 @@ export function CandidateSidebar() {
       </nav>
 
       <div className="mt-auto">
-        <div className="mb-4 flex justify-end">
-          <ThemeToggle />
-        </div>
         <div className="rounded-lg border border-border bg-card p-4">
           <div className="flex items-center gap-3">
             <div className="grid size-10 place-items-center rounded-full bg-primary text-xs font-extrabold text-primary-foreground">

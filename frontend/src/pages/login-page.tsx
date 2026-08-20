@@ -2,31 +2,22 @@ import { CircleHelp } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { Logo } from '@/components/brand/logo'
-import { ThemeToggle } from '@/components/theme/theme-toggle'
 import { Button } from '@/components/ui/button'
 import { InteractiveLoginHero } from '@/features/auth/interactive-login-hero'
-import { initialLoginAnimationState } from '@/features/auth/login-animation.types'
+import { initialLoginAnimationState, type LoginAnimationState } from '@/features/auth/login-animation.types'
 import { LoginForm } from '@/features/auth/login-form'
 import { useAuth } from '@/features/auth/use-auth'
-import { getProfile } from '@/features/profile/profile.api'
 
 export function LoginPage() {
-  const [loginAnimation, setLoginAnimation] = useState(initialLoginAnimationState)
+  const [loginAnimation, setLoginAnimation] = useState<LoginAnimationState>(initialLoginAnimationState)
+  const { user } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
-  const { user } = useAuth()
 
   useEffect(() => {
     if (!user) return
-    let active = true
-    void getProfile().then((profile) => {
-      if (!active) return
-      const from = (location.state as { from?: string } | null)?.from
-      navigate(profile?.status === 'COMPLETE' && from && !from.startsWith('/backoffice') ? from : profile?.status === 'COMPLETE' ? '/vagas' : '/onboarding/perfil', { replace: true })
-    }).catch(() => {
-      if (active) navigate('/onboarding/perfil', { replace: true })
-    })
-    return () => { active = false }
+    const destination = (location.state as { from?: { pathname?: string } } | null)?.from?.pathname || '/vagas'
+    navigate(destination, { replace: true })
   }, [location.state, navigate, user])
 
   return (
@@ -38,7 +29,6 @@ export function LoginPage() {
           <header className="flex items-center justify-between">
             <Logo className="text-foreground" />
             <div className="flex items-center gap-2">
-              <ThemeToggle />
               <Button variant="outline" size="pill"><CircleHelp /> Ajuda</Button>
             </div>
           </header>

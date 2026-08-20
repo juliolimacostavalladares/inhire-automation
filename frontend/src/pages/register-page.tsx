@@ -2,16 +2,15 @@ import { CircleHelp } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Logo } from '@/components/brand/logo'
-import { ThemeToggle } from '@/components/theme/theme-toggle'
 import { Button } from '@/components/ui/button'
 import { InteractiveLoginHero } from '@/features/auth/interactive-login-hero'
-import { initialLoginAnimationState } from '@/features/auth/login-animation.types'
 import { RegisterForm } from '@/features/auth/register-form'
+import { initialLoginAnimationState, type LoginAnimationState } from '@/features/auth/login-animation.types'
 import { useAuth } from '@/features/auth/use-auth'
 import { getProfile } from '@/features/profile/profile.api'
 
 export function RegisterPage() {
-  const [animation, setAnimation] = useState(initialLoginAnimationState)
+  const [animation, setAnimation] = useState<LoginAnimationState>(initialLoginAnimationState)
   const navigate = useNavigate()
   const { user } = useAuth()
 
@@ -28,7 +27,6 @@ export function RegisterPage() {
           <header className="flex items-center justify-between">
             <Logo className="text-foreground" />
             <div className="flex items-center gap-2">
-              <ThemeToggle />
               <Button variant="outline" size="pill"><CircleHelp /> Ajuda</Button>
             </div>
           </header>

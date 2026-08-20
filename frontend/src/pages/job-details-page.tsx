@@ -3,7 +3,6 @@ import { ArrowLeft, Bookmark, Check, ExternalLink, MapPin, Share2 } from 'lucide
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { Logo } from '@/components/brand/logo'
 import { CompanyLogo } from '@/components/brand/company-logo'
-import { ThemeToggle } from '@/components/theme/theme-toggle'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -50,7 +49,6 @@ export function JobDetailsPage() {
             <Button asChild variant="ghost" className="hidden sm:inline-flex">
               <Link to="/vagas"><ArrowLeft /> Voltar para vagas</Link>
             </Button>
-            <ThemeToggle />
           </div>
         </div>
       </header>
