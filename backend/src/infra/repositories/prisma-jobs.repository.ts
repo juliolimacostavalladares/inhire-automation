@@ -10,6 +10,8 @@ import { JobStatus } from '../../domain/enums';
 import { IJobsRepository } from '../../app/repositories/jobs.repository.interface';
 import { PrismaService } from '../databases/prisma/prisma.service';
 
+import { getAreaKeywords } from '../utils/job-area-classifier.util';
+
 type JobRecord = Prisma.JobGetPayload<{
   select: {
     id: true;
@@ -97,6 +99,16 @@ export class PrismaJobsRepository implements IJobsRepository {
   }
 
   async findMany(filter: IJobFilterDTO): Promise<IPaginatedResult<IJobOutputDTO>> {
+    const areaKeywords = filter.area ? getAreaKeywords(filter.area) : [];
+    const areaCondition: Prisma.JobWhereInput | undefined =
+      areaKeywords.length > 0
+        ? {
+            OR: areaKeywords.map((keyword) => ({
+              title: { contains: keyword, mode: 'insensitive' as const },
+            })),
+          }
+        : undefined;
+
     const where: Prisma.JobWhereInput = {
       tenantId: filter.tenantId,
       status: filter.status,
@@ -109,6 +121,7 @@ export class PrismaJobsRepository implements IJobsRepository {
       title: filter.title
         ? { contains: filter.title, mode: 'insensitive' }
         : undefined,
+      ...(areaCondition ? { AND: [areaCondition] } : {}),
       firstSeenAt:
         filter.firstSeenFrom || filter.firstSeenTo
           ? {

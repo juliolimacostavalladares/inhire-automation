@@ -34,6 +34,10 @@ import {
   type ITailoredResumesRepository,
 } from '../../../app/repositories/tailored-resumes.repository.interface';
 import {
+  CANDIDATE_PROFILES_REPOSITORY_TOKEN,
+  type ICandidateProfilesRepository,
+} from '../../../app/repositories/candidate-profiles.repository.interface';
+import {
   RESUME_GENERATION_JOB,
   RESUME_GENERATION_QUEUE,
   RESUME_PROGRESS_CHANNEL,
@@ -56,6 +60,8 @@ export class JobsController {
     private readonly downloadJobTailoredResumePdfUseCase: DownloadJobTailoredResumePdfUseCase,
     @Inject(TAILORED_RESUMES_REPOSITORY_TOKEN)
     private readonly tailoredResumesRepository: ITailoredResumesRepository,
+    @Inject(CANDIDATE_PROFILES_REPOSITORY_TOKEN)
+    private readonly candidateProfilesRepository: ICandidateProfilesRepository,
     @InjectQueue(RESUME_GENERATION_QUEUE)
     private readonly resumeQueue: Queue<ResumeGenerationJobData>,
     private readonly redisPubSub: RedisPubSubService,
@@ -70,7 +76,27 @@ export class JobsController {
     @CurrentAuth() auth?: AuthContext,
   ) {
     enforceJobsListPolicy(query, auth);
-    return this.listJobsUseCase.execute(query);
+
+    let candidateArea: string | undefined = undefined;
+    let profileComplete = false;
+
+    if (auth && auth.type === 'jwt') {
+      const profile = await this.candidateProfilesRepository.findByUserId(auth.userId);
+      if (profile) {
+        profileComplete = profile.status === 'COMPLETE' || profile.status === 'NEEDS_REVIEW';
+        candidateArea = profile.professionalArea || profile.professionalTitle || undefined;
+        if (!query.area && candidateArea) {
+          query.area = candidateArea;
+        }
+      }
+    }
+
+    const result = await this.listJobsUseCase.execute(query);
+    return {
+      ...result,
+      candidateArea,
+      profileComplete,
+    };
   }
 
   @Public()

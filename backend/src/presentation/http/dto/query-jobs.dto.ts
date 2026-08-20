@@ -39,6 +39,12 @@ export class QueryJobsDto extends PaginationDto {
   @MaxLength(200)
   title?: string;
 
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  area?: string;
+
   @ApiPropertyOptional({ format: "date-time" })
   @IsOptional()
   @IsDateString()

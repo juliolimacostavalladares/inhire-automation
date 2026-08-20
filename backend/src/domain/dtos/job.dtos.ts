@@ -25,6 +25,7 @@ export interface IJobFilterDTO {
   workplaceType?: string;
   location?: string;
   title?: string;
+  area?: string;
   firstSeenFrom?: string;
   firstSeenTo?: string;
   publishedFrom?: string;
