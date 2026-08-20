@@ -8,8 +8,12 @@ import type { Environment } from "./config/environment";
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, { bufferLogs: true });
-  const config = app.get(ConfigService<Environment, true>);
-  app.use(helmet());
+  app.use(
+    helmet({
+      crossOriginResourcePolicy: { policy: "cross-origin" },
+      crossOriginOpenerPolicy: false,
+    }),
+  );
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
@@ -18,6 +22,7 @@ async function bootstrap() {
       transformOptions: { enableImplicitConversion: true },
     }),
   );
+  const config = app.get(ConfigService<Environment, true>);
   const origins = config.get("corsOrigins", { infer: true });
   app.enableCors({
     origin: origins.length ? origins : ["http://localhost:5173", "http://127.0.0.1:5173"],
