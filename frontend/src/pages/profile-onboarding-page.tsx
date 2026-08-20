@@ -229,6 +229,7 @@ export function ProfileOnboardingPage() {
                   <Label htmlFor="profile-title">Cargo ou objetivo profissional</Label>
                   <Input
                     id="profile-title"
+                    data-testid="profile-title"
                     value={form.professionalTitle ?? ''}
                     onChange={(event) => setField('professionalTitle', event.target.value)}
                   />
@@ -237,6 +238,7 @@ export function ProfileOnboardingPage() {
                   <Label htmlFor="profile-location">Localização</Label>
                   <Input
                     id="profile-location"
+                    data-testid="profile-location"
                     value={form.location ?? ''}
                     onChange={(event) => setField('location', event.target.value)}
                     placeholder="Cidade, Estado, País"
@@ -246,6 +248,7 @@ export function ProfileOnboardingPage() {
                   <Label htmlFor="profile-phone">Telefone</Label>
                   <Input
                     id="profile-phone"
+                    data-testid="profile-phone"
                     value={form.phone ?? ''}
                     onChange={(event) => setField('phone', event.target.value)}
                     placeholder="(XX) XXXXX-XXXX"
@@ -255,6 +258,7 @@ export function ProfileOnboardingPage() {
                   <Label htmlFor="profile-seniority">Senioridade</Label>
                   <Input
                     id="profile-seniority"
+                    data-testid="profile-seniority"
                     value={form.seniority ?? ''}
                     onChange={(event) => setField('seniority', event.target.value)}
                     placeholder="Ex.: Sênior, Pleno, Júnior"
@@ -264,6 +268,7 @@ export function ProfileOnboardingPage() {
                   <Label htmlFor="profile-skills">Competências (Top Skills)</Label>
                   <Input
                     id="profile-skills"
+                    data-testid="profile-skills"
                     value={skills}
                     onChange={(event) =>
                       setForm((current) => ({
@@ -278,6 +283,7 @@ export function ProfileOnboardingPage() {
                   <Label htmlFor="profile-summary">Resumo profissional</Label>
                   <textarea
                     id="profile-summary"
+                    data-testid="profile-summary"
                     className="min-h-32 w-full resize-y rounded-lg border border-input bg-background px-3 py-3 text-sm outline-none ring-offset-background placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
                     value={form.summary ?? ''}
                     onChange={(event) => setField('summary', event.target.value)}
@@ -300,7 +306,7 @@ export function ProfileOnboardingPage() {
                     </p>
                   </div>
                 </div>
-                <Button variant="outline" size="sm" onClick={addExperience} type="button">
+                <Button variant="outline" size="sm" onClick={addExperience} type="button" data-testid="btn-add-experience">
                   <Plus className="size-4" /> Adicionar
                 </Button>
               </div>
@@ -310,7 +316,7 @@ export function ProfileOnboardingPage() {
                   <p className="text-sm text-muted-foreground italic">Nenhuma experiência extraída ou cadastrada.</p>
                 ) : (
                   experiences.map((exp, idx) => (
-                    <div key={idx} className="rounded-xl border border-border/80 bg-muted/20 p-4 sm:p-5 relative">
+                    <div key={idx} className="rounded-xl border border-border/80 bg-muted/20 p-4 sm:p-5 relative" data-testid={`exp-card-${idx}`}>
                       <div className="flex justify-between items-start mb-4">
                         <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
                           Experiência #{idx + 1}
@@ -322,6 +328,7 @@ export function ProfileOnboardingPage() {
                           onClick={() => removeExperience(idx)}
                           type="button"
                           aria-label="Remover experiência"
+                          data-testid={`exp-remove-${idx}`}
                         >
                           <Trash2 className="size-3.5" /> Remover
                         </Button>
@@ -331,6 +338,7 @@ export function ProfileOnboardingPage() {
                         <div className="grid gap-1.5">
                           <Label className="text-xs">Empresa</Label>
                           <Input
+                            data-testid={`exp-company-${idx}`}
                             value={exp.company}
                             placeholder="Nome da empresa"
                             onChange={(e) => updateExperience(idx, { company: e.target.value })}
@@ -339,6 +347,7 @@ export function ProfileOnboardingPage() {
                         <div className="grid gap-1.5">
                           <Label className="text-xs">Cargo / Título</Label>
                           <Input
+                            data-testid={`exp-title-${idx}`}
                             value={exp.title ?? ''}
                             placeholder="Ex: Engenheiro de Software Senior"
                             onChange={(e) => updateExperience(idx, { title: e.target.value })}
@@ -348,11 +357,13 @@ export function ProfileOnboardingPage() {
                           <Label className="text-xs">Início (Mês / Ano)</Label>
                           <div className="grid grid-cols-2 gap-2">
                             <Input
+                              data-testid={`exp-start-month-${idx}`}
                               value={exp.startMonth ?? ''}
                               placeholder="Mês (ex: May)"
                               onChange={(e) => updateExperience(idx, { startMonth: e.target.value || null })}
                             />
                             <Input
+                              data-testid={`exp-start-year-${idx}`}
                               value={exp.startYear ?? ''}
                               placeholder="Ano (ex: 2023)"
                               onChange={(e) => updateExperience(idx, { startYear: e.target.value || null })}
@@ -365,6 +376,7 @@ export function ProfileOnboardingPage() {
                             <label className="flex items-center gap-1.5 text-xs text-muted-foreground cursor-pointer">
                               <input
                                 type="checkbox"
+                                data-testid={`exp-ongoing-${idx}`}
                                 checked={exp.ongoing}
                                 onChange={(e) => updateExperience(idx, { ongoing: e.target.checked })}
                                 className="rounded"
@@ -375,11 +387,13 @@ export function ProfileOnboardingPage() {
                           {!exp.ongoing ? (
                             <div className="grid grid-cols-2 gap-2">
                               <Input
+                                data-testid={`exp-end-month-${idx}`}
                                 value={exp.endMonth ?? ''}
                                 placeholder="Mês (ex: May)"
                                 onChange={(e) => updateExperience(idx, { endMonth: e.target.value || null })}
                               />
                               <Input
+                                data-testid={`exp-end-year-${idx}`}
                                 value={exp.endYear ?? ''}
                                 placeholder="Ano (ex: 2025)"
                                 onChange={(e) => updateExperience(idx, { endYear: e.target.value || null })}
@@ -394,6 +408,7 @@ export function ProfileOnboardingPage() {
                         <div className="grid gap-1.5 sm:col-span-2">
                           <Label className="text-xs">Localização</Label>
                           <Input
+                            data-testid={`exp-location-${idx}`}
                             value={exp.location ?? ''}
                             placeholder="Ex: Remoto, Rondon, PR ou São Paulo, SP"
                             onChange={(e) => updateExperience(idx, { location: e.target.value || null })}
@@ -402,6 +417,7 @@ export function ProfileOnboardingPage() {
                         <div className="grid gap-1.5 sm:col-span-2">
                           <Label className="text-xs">Descrição das atividades / Realizações</Label>
                           <textarea
+                            data-testid={`exp-desc-${idx}`}
                             className="min-h-24 w-full resize-y rounded-lg border border-input bg-background px-3 py-2 text-xs outline-none focus-visible:ring-2 focus-visible:ring-ring"
                             value={exp.description ?? ''}
                             placeholder="Descreva suas principais realizações e tecnologias..."
@@ -429,7 +445,7 @@ export function ProfileOnboardingPage() {
                     </p>
                   </div>
                 </div>
-                <Button variant="outline" size="sm" onClick={addEducation} type="button">
+                <Button variant="outline" size="sm" onClick={addEducation} type="button" data-testid="btn-add-education">
                   <Plus className="size-4" /> Adicionar
                 </Button>
               </div>
@@ -439,7 +455,7 @@ export function ProfileOnboardingPage() {
                   <p className="text-sm text-muted-foreground italic">Nenhuma formação acadêmica extraída ou cadastrada.</p>
                 ) : (
                   education.map((edu, idx) => (
-                    <div key={idx} className="rounded-xl border border-border/80 bg-muted/20 p-4 sm:p-5 relative">
+                    <div key={idx} className="rounded-xl border border-border/80 bg-muted/20 p-4 sm:p-5 relative" data-testid={`edu-card-${idx}`}>
                       <div className="flex justify-between items-start mb-4">
                         <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
                           Formação #{idx + 1}
@@ -451,6 +467,7 @@ export function ProfileOnboardingPage() {
                           onClick={() => removeEducation(idx)}
                           type="button"
                           aria-label="Remover formação"
+                          data-testid={`edu-remove-${idx}`}
                         >
                           <Trash2 className="size-3.5" /> Remover
                         </Button>
@@ -460,6 +477,7 @@ export function ProfileOnboardingPage() {
                         <div className="grid gap-1.5 sm:col-span-2">
                           <Label className="text-xs">Instituição / Escola</Label>
                           <Input
+                            data-testid={`edu-school-${idx}`}
                             value={edu.school}
                             placeholder="Ex: Firjan SENAI, Universidade de São Paulo"
                             onChange={(e) => updateEducation(idx, { school: e.target.value })}
@@ -468,6 +486,7 @@ export function ProfileOnboardingPage() {
                         <div className="grid gap-1.5">
                           <Label className="text-xs">Grau / Formato</Label>
                           <Input
+                            data-testid={`edu-degree-${idx}`}
                             value={edu.degree ?? ''}
                             placeholder="Ex: Ensino Médio, Curso, Bacharelado"
                             onChange={(e) => updateEducation(idx, { degree: e.target.value || null })}
@@ -476,6 +495,7 @@ export function ProfileOnboardingPage() {
                         <div className="grid gap-1.5">
                           <Label className="text-xs">Área de Estudo / Curso</Label>
                           <Input
+                            data-testid={`edu-field-${idx}`}
                             value={edu.field ?? ''}
                             placeholder="Ex: Tecnologia da Informação, Ciência da Computação"
                             onChange={(e) => updateEducation(idx, { field: e.target.value || null })}
@@ -485,21 +505,25 @@ export function ProfileOnboardingPage() {
                           <Label className="text-xs">Período</Label>
                           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                             <Input
+                              data-testid={`edu-start-month-${idx}`}
                               value={edu.startMonth ?? ''}
                               placeholder="Mês início (ex: Feb)"
                               onChange={(e) => updateEducation(idx, { startMonth: e.target.value || null })}
                             />
                             <Input
+                              data-testid={`edu-start-year-${idx}`}
                               value={edu.startYear ?? ''}
                               placeholder="Ano início (ex: 2019)"
                               onChange={(e) => updateEducation(idx, { startYear: e.target.value || null })}
                             />
                             <Input
+                              data-testid={`edu-end-month-${idx}`}
                               value={edu.endMonth ?? ''}
                               placeholder="Mês fim (ex: Dec)"
                               onChange={(e) => updateEducation(idx, { endMonth: e.target.value || null })}
                             />
                             <Input
+                              data-testid={`edu-end-year-${idx}`}
                               value={edu.endYear ?? ''}
                               placeholder="Ano fim (ex: 2021)"
                               onChange={(e) => updateEducation(idx, { endYear: e.target.value || null })}
@@ -513,7 +537,7 @@ export function ProfileOnboardingPage() {
               </div>
             </Card>
 
-            <Button className="w-full sm:w-auto h-11 text-base px-8 font-bold" onClick={() => void handleSave()} disabled={loading}>
+            <Button className="w-full sm:w-auto h-11 text-base px-8 font-bold" onClick={() => void handleSave()} disabled={loading} data-testid="btn-confirm-save-profile">
               <Save className="size-5" /> Confirmar e Salvar Perfil
             </Button>
           </div>
