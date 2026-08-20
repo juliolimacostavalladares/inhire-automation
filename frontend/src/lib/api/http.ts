@@ -15,6 +15,23 @@ http.interceptors.request.use((config) => {
   return config
 })
 
+http.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (
+      axios.isAxiosError(error) &&
+      (error.response?.status === 401 ||
+        (error.response?.status === 404 &&
+          error.config?.url?.includes('/auth/me')))
+    ) {
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('inhire_token')
+      }
+    }
+    return Promise.reject(error)
+  },
+)
+
 export function getApiErrorMessage(error: unknown, fallback = 'Não foi possível carregar os dados.') {
   if (axios.isAxiosError(error)) {
     console.error('[HTTP Error]', {

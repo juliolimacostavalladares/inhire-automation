@@ -35,7 +35,7 @@ export class AuthController {
   ) {
     const result = await this.registerUserUseCase.execute(body);
     SessionCookieAdapter.setSession(res, result.token);
-    return { accessToken: result.token, user: result.user };
+    return { token: result.token, accessToken: result.token, user: result.user };
   }
 
   @Public()
@@ -47,7 +47,7 @@ export class AuthController {
   ) {
     const result = await this.loginUserUseCase.execute(body);
     SessionCookieAdapter.setSession(res, result.token);
-    return { accessToken: result.token, user: result.user };
+    return { token: result.token, accessToken: result.token, user: result.user };
   }
 
   @AllowJwt()

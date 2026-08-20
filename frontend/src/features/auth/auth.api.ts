@@ -12,13 +12,15 @@ export interface AuthUser {
 interface AuthResponse {
   user: AuthUser
   token?: string
+  accessToken?: string
 }
 
 export async function login(input: LoginInput) {
   try {
     const { data } = await http.post<AuthResponse>('/auth/login', input)
-    if (data.token) {
-      localStorage.setItem('inhire_token', data.token)
+    const token = data.token || data.accessToken
+    if (token) {
+      localStorage.setItem('inhire_token', token)
     }
     return data.user
   } catch (error) {
@@ -34,15 +36,26 @@ export async function login(input: LoginInput) {
 
 export async function register(input: { name: string; email: string; password: string }) {
   const { data } = await http.post<AuthResponse>('/auth/register', input)
-  if (data.token) {
-    localStorage.setItem('inhire_token', data.token)
+  const token = data.token || data.accessToken
+  if (token) {
+    localStorage.setItem('inhire_token', token)
   }
   return data.user
 }
 
 export async function getCurrentUser() {
-  const { data } = await http.get<AuthUser>('/auth/me')
-  return data
+  try {
+    const { data } = await http.get<AuthUser>('/auth/me')
+    return data
+  } catch (error) {
+    if (
+      axios.isAxiosError(error) &&
+      (error.response?.status === 401 || error.response?.status === 404)
+    ) {
+      localStorage.removeItem('inhire_token')
+    }
+    throw error
+  }
 }
 
 export async function logout() {
