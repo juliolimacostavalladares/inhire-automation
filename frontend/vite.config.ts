@@ -11,4 +11,32 @@ export default defineConfig({
       '@': path.resolve(import.meta.dirname, './src'),
     },
   },
+  server: {
+    proxy: {
+      '/auth': {
+        target: 'http://localhost:3000',
+        changeOrigin: true,
+      },
+      '/me': {
+        target: 'http://localhost:3000',
+        changeOrigin: true,
+      },
+      '/jobs': {
+        target: 'http://localhost:3000',
+        changeOrigin: true,
+      },
+      '/runs': {
+        target: 'http://localhost:3000',
+        changeOrigin: true,
+      },
+      '/tenants': {
+        target: 'http://localhost:3000',
+        changeOrigin: true,
+      },
+      '/health': {
+        target: 'http://localhost:3000',
+        changeOrigin: true,
+      },
+    },
+  },
 })

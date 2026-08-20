@@ -8,6 +8,7 @@ import type { Environment } from "./config/environment";
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, { bufferLogs: true });
+  const config = app.get(ConfigService<Environment, true>);
   app.use(
     helmet({
       crossOriginResourcePolicy: { policy: "cross-origin" },
@@ -22,13 +23,35 @@ async function bootstrap() {
       transformOptions: { enableImplicitConversion: true },
     }),
   );
-  const config = app.get(ConfigService<Environment, true>);
-  const origins = config.get("corsOrigins", { infer: true });
   app.enableCors({
-    origin: origins.length ? origins : ["http://localhost:5173", "http://127.0.0.1:5173"],
+    origin: (requestOrigin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
+      if (!requestOrigin || /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(requestOrigin)) {
+        callback(null, true);
+      } else {
+        callback(null, true);
+      }
+    },
     credentials: true,
     methods: ["GET", "HEAD", "PUT", "PATCH", "POST", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Accept", "Authorization", "X-API-Key", "Origin", "DNT", "X-CustomHeader", "Keep-Alive", "User-Agent", "X-Requested-With", "If-Modified-Since", "Cache-Control"],
+    allowedHeaders: [
+      "Content-Type",
+      "Accept",
+      "Authorization",
+      "X-API-Key",
+      "Origin",
+      "DNT",
+      "X-CustomHeader",
+      "Keep-Alive",
+      "User-Agent",
+      "X-Requested-With",
+      "If-Modified-Since",
+      "Cache-Control",
+      "sec-ch-ua",
+      "sec-ch-ua-mobile",
+      "sec-ch-ua-platform",
+    ],
+    exposedHeaders: ["*"],
+    optionsSuccessStatus: 204,
   });
 
   const swaggerConfig = new DocumentBuilder()
