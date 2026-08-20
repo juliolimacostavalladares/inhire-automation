@@ -50,6 +50,17 @@ export interface CandidateProfile {
   reviewedAt?: string | null
 }
 
+export interface CandidateProfileAnalysis {
+  seniority: string
+  headline: string
+  summary: string
+  coreCompetencies: string[]
+  strengths: string[]
+  recommendations: string[]
+  targetRoles: string[]
+  searchKeywords: string[]
+}
+
 export async function getProfile() {
   const { data } = await http.get<CandidateProfile | null>('/me/profile')
   return data
@@ -68,5 +79,10 @@ export async function importProfile(input: { linkedinProfileUrl: string; file: F
 
 export async function updateProfile(input: Partial<CandidateProfile>) {
   const { data } = await http.patch<CandidateProfile>('/me/profile', input)
+  return data
+}
+
+export async function analyzeProfile() {
+  const { data } = await http.post<CandidateProfileAnalysis>('/me/profile/analyze')
   return data
 }

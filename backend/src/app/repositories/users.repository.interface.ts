@@ -1,6 +1,6 @@
 import { ICreateUserDTO, IUpdateUserDTO, IUserOutputDTO } from '../../domain/dtos';
 
-export const USERS_REPOSITORY_TOKEN = Symbol('USERS_REPOSITORY_TOKEN');
+export const USERS_REPOSITORY_TOKEN = Symbol.for('USERS_REPOSITORY_TOKEN');
 
 export interface IUsersRepository {
   create(data: ICreateUserDTO): Promise<IUserOutputDTO>;

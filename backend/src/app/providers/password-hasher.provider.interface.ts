@@ -1,4 +1,4 @@
-export const PASSWORD_HASHER_TOKEN = Symbol('PASSWORD_HASHER_TOKEN');
+export const PASSWORD_HASHER_TOKEN = Symbol.for('PASSWORD_HASHER_TOKEN');
 
 export interface IPasswordHasher {
   hash(plain: string): Promise<string>;

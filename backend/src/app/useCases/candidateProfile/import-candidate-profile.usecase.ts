@@ -9,7 +9,7 @@ import {
   CANDIDATE_PROFILES_REPOSITORY_TOKEN,
   ICandidateProfilesRepository,
 } from '../../repositories/candidate-profiles.repository.interface';
-import { parseLinkedInPdf } from '../../../infra/utils/profile-parser';
+import { ExtractCandidateProfileAiUseCase } from './extract-candidate-profile-ai.usecase';
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 const ALLOWED_MIME = new Set(['application/pdf']);
@@ -19,6 +19,7 @@ export class ImportCandidateProfileUseCase {
   constructor(
     @Inject(CANDIDATE_PROFILES_REPOSITORY_TOKEN)
     private readonly repository: ICandidateProfilesRepository,
+    private readonly extractCandidateProfileAiUseCase: ExtractCandidateProfileAiUseCase,
   ) {}
 
   async execute(input: {
@@ -58,11 +59,14 @@ export class ImportCandidateProfileUseCase {
       );
     }
 
-    const extracted = await parseLinkedInPdf(file.buffer).catch(() => {
-      throw new BadRequestException(
-        'Não foi possível processar a estrutura do PDF.',
-      );
-    });
+    const sanitizedRawText = rawParsed.text
+      .replaceAll(String.fromCharCode(0), '')
+      .trim();
+
+    // Extração estruturada via Modelo de Inteligência Artificial
+    const extracted = await this.extractCandidateProfileAiUseCase.execute(
+      sanitizedRawText,
+    );
 
     return this.repository.upsert(userId, {
       userId,
@@ -72,10 +76,12 @@ export class ImportCandidateProfileUseCase {
       sourceFileName: file.originalname.slice(0, 255),
       sourceFileMime: file.mimetype,
       sourceFileSize: file.size,
-      extractedText: rawParsed.text.replaceAll(String.fromCharCode(0), '').trim(),
+      extractedText: sanitizedRawText,
       sourceImportedAt: new Date(),
       reviewedAt: null,
       professionalTitle: extracted.professionalTitle,
+      professionalArea: extracted.professionalArea,
+      seniority: extracted.seniority,
       phone: extracted.phone,
       location: extracted.location,
       summary: extracted.summary,

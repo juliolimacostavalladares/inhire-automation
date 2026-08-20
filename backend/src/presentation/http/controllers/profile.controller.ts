@@ -3,6 +3,7 @@ import {
   Body,
   Controller,
   Get,
+  Patch,
   Put,
   Post,
   UploadedFile,
@@ -17,8 +18,9 @@ import { ImportProfileDto, UpdateProfileDto } from '../dto/profile.dto';
 import { GetCandidateProfileUseCase } from '../../../app/useCases/candidateProfile/get-candidate-profile.usecase';
 import { ImportCandidateProfileUseCase } from '../../../app/useCases/candidateProfile/import-candidate-profile.usecase';
 import { UpdateCandidateProfileUseCase } from '../../../app/useCases/candidateProfile/update-candidate-profile.usecase';
+import { AnalyzeCandidateProfileUseCase } from '../../../app/useCases/candidateProfile/analyze-candidate-profile.usecase';
 
-@Controller('profile')
+@Controller(['profile', 'me/profile'])
 @UseGuards(ApiKeyGuard)
 @AllowJwt()
 @RequireUser()
@@ -27,6 +29,7 @@ export class ProfileController {
     private readonly getCandidateProfileUseCase: GetCandidateProfileUseCase,
     private readonly importCandidateProfileUseCase: ImportCandidateProfileUseCase,
     private readonly updateCandidateProfileUseCase: UpdateCandidateProfileUseCase,
+    private readonly analyzeCandidateProfileUseCase: AnalyzeCandidateProfileUseCase,
   ) {}
 
   @Get()
@@ -37,7 +40,7 @@ export class ProfileController {
     return this.getCandidateProfileUseCase.execute(auth.userId);
   }
 
-  @Post('import-pdf')
+  @Post(['import', 'import-pdf'])
   @UseInterceptors(
     FileInterceptor('file', {
       limits: { fileSize: 10 * 1024 * 1024 },
@@ -60,6 +63,7 @@ export class ProfileController {
   }
 
   @Put()
+  @Patch()
   async update(
     @CurrentAuth() auth: AuthContext,
     @Body() body: UpdateProfileDto,
@@ -68,5 +72,13 @@ export class ProfileController {
       throw new UnauthorizedException('Authentication required');
     }
     return this.updateCandidateProfileUseCase.execute(auth.userId, body);
+  }
+
+  @Post('analyze')
+  async analyze(@CurrentAuth() auth: AuthContext) {
+    if (auth.type !== 'jwt') {
+      throw new UnauthorizedException('Authentication required');
+    }
+    return this.analyzeCandidateProfileUseCase.execute(auth.userId);
   }
 }
