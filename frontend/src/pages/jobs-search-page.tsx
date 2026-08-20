@@ -1,37 +1,33 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Search, SlidersHorizontal } from 'lucide-react'
+import { ArrowRight, Search, SlidersHorizontal, Sparkles, UserCheck } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { CandidateTopbar } from '@/components/layout/candidate-topbar'
 import { Button } from '@/components/ui/button'
+import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { JobCard } from '@/features/jobs/job-card'
-import { useJobs } from '@/features/jobs/use-jobs'
+import { useJobsStore } from '@/features/jobs/jobs.store'
 import { useAuth } from '@/features/auth/use-auth'
 import { cn } from '@/lib/utils'
 
-type QuickFilter = 'recommended' | 'recent' | 'remote' | 'all'
-
-const filters: Array<{ id: QuickFilter; label: string }> = [
-  { id: 'recommended', label: 'Para você' },
-  { id: 'recent', label: 'Últimas 2 semanas' },
-  { id: 'remote', label: 'Remoto' },
-  { id: 'all', label: 'Todas as áreas' },
-]
+type QuickFilter = 'recommended' | 'recent' | 'remote' | 'tech' | 'health' | 'finance' | 'all'
 
 export function JobsSearchPage() {
   const [query, setQuery] = useState('')
   const [activeFilter, setActiveFilter] = useState<QuickFilter>('recommended')
   const [recentFrom] = useState(() => new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString())
-  const { jobs, total, favorites, loading, error, fetchJobs, toggleFavorite } = useJobs()
+  const { jobs, total, candidateArea, profileComplete, favorites, loading, error, fetchJobs, toggleFavorite } = useJobsStore()
   const { user } = useAuth()
 
   const request = useMemo(() => ({
-    ...(activeFilter === 'recent'
-      ? { firstSeenFrom: recentFrom }
-      : {}),
+    ...(activeFilter === 'recent' ? { firstSeenFrom: recentFrom } : {}),
     ...(activeFilter === 'remote' ? { workplaceType: 'Remote' } : {}),
+    ...(activeFilter === 'tech' ? { area: 'Tecnologia' } : {}),
+    ...(activeFilter === 'health' ? { area: 'Saúde e Medicina' } : {}),
+    ...(activeFilter === 'finance' ? { area: 'Finanças' } : {}),
+    ...(activeFilter === 'recommended' && candidateArea ? { area: candidateArea } : {}),
     title: query.trim() || undefined,
-  }), [activeFilter, query, recentFrom])
+  }), [activeFilter, query, recentFrom, candidateArea])
 
   useEffect(() => {
     const timeout = window.setTimeout(() => {
@@ -53,9 +49,35 @@ export function JobsSearchPage() {
             Encontre sua próxima oportunidade
           </h1>
           <p className="mt-2 text-sm text-muted-foreground">
-            Vagas verificadas e atualizadas diariamente.
+            Vagas verificadas e atualizadas diariamente com base na sua área de atuação.
           </p>
         </div>
+
+        {/* Profile Onboarding CTA if profile is not completed */}
+        {user && profileComplete === false && (
+          <Card className="mb-8 overflow-hidden rounded-2xl border-primary/40 bg-gradient-to-r from-accent/40 via-card to-card p-5 sm:p-6 shadow-xs">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-start gap-3.5">
+                <div className="grid size-11 shrink-0 place-items-center rounded-xl bg-primary text-primary-foreground font-black shadow-xs">
+                  <Sparkles className="size-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-extrabold text-foreground">
+                    Complete seu perfil profissional com IA
+                  </h3>
+                  <p className="mt-1 text-xs text-muted-foreground max-w-xl leading-relaxed">
+                    Envie seu currículo ou PDF do LinkedIn para que nossa IA identifique sua área de atuação e filtre automaticamente as vagas ideais para o seu perfil.
+                  </p>
+                </div>
+              </div>
+              <Button asChild className="shrink-0 rounded-xl bg-primary text-primary-foreground font-bold shadow-xs hover:bg-primary/90">
+                <Link to="/onboarding/perfil" className="flex items-center gap-2">
+                  Montar meu perfil agora <ArrowRight className="size-4" />
+                </Link>
+              </Button>
+            </div>
+          </Card>
+        )}
 
         {/* Search & Filter Bar */}
         <div className="mb-5 flex items-center gap-3">
@@ -80,35 +102,88 @@ export function JobsSearchPage() {
 
         {/* Quick Filter Chips */}
         <div className="mb-8 flex gap-2.5 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          {filters.map((filter) => {
-            const isActive = activeFilter === filter.id
-            return (
-              <Button
-                key={filter.id}
-                type="button"
-                variant="outline"
-                size="sm"
-                className={cn(
-                  'h-8.5 rounded-full px-4 text-xs transition-all shadow-2xs',
-                  isActive
-                    ? 'bg-primary text-primary-foreground font-extrabold border-primary hover:bg-primary/90'
-                    : 'border-border bg-card text-foreground font-semibold hover:border-foreground/30',
-                  filter.id === 'recommended' && !user && 'hidden',
-                )}
-                aria-pressed={isActive}
-                onClick={() => setActiveFilter(filter.id)}
-              >
-                {filter.label}
-              </Button>
-            )
-          })}
+          {user && candidateArea && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className={cn(
+                'h-8.5 rounded-full px-4 text-xs transition-all shadow-2xs',
+                activeFilter === 'recommended'
+                  ? 'bg-primary text-primary-foreground font-extrabold border-primary hover:bg-primary/90'
+                  : 'border-border bg-card text-foreground font-semibold hover:border-foreground/30',
+              )}
+              aria-pressed={activeFilter === 'recommended'}
+              onClick={() => setActiveFilter('recommended')}
+            >
+              <UserCheck className="mr-1.5 size-3.5" />
+              Para você ({candidateArea})
+            </Button>
+          )}
+
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className={cn(
+              'h-8.5 rounded-full px-4 text-xs transition-all shadow-2xs',
+              activeFilter === 'recent'
+                ? 'bg-primary text-primary-foreground font-extrabold border-primary hover:bg-primary/90'
+                : 'border-border bg-card text-foreground font-semibold hover:border-foreground/30',
+            )}
+            aria-pressed={activeFilter === 'recent'}
+            onClick={() => setActiveFilter('recent')}
+          >
+            Últimas 2 semanas
+          </Button>
+
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className={cn(
+              'h-8.5 rounded-full px-4 text-xs transition-all shadow-2xs',
+              activeFilter === 'remote'
+                ? 'bg-primary text-primary-foreground font-extrabold border-primary hover:bg-primary/90'
+                : 'border-border bg-card text-foreground font-semibold hover:border-foreground/30',
+            )}
+            aria-pressed={activeFilter === 'remote'}
+            onClick={() => setActiveFilter('remote')}
+          >
+            Remoto
+          </Button>
+
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className={cn(
+              'h-8.5 rounded-full px-4 text-xs transition-all shadow-2xs',
+              activeFilter === 'all'
+                ? 'bg-primary text-primary-foreground font-extrabold border-primary hover:bg-primary/90'
+                : 'border-border bg-card text-foreground font-semibold hover:border-foreground/30',
+            )}
+            aria-pressed={activeFilter === 'all'}
+            onClick={() => setActiveFilter('all')}
+          >
+            Todas as áreas
+          </Button>
         </div>
 
         {/* Section Header: Title + Counter */}
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-xl font-extrabold tracking-tight text-foreground">
-            Vagas para você
-          </h2>
+          <div>
+            <h2 className="text-xl font-extrabold tracking-tight text-foreground">
+              {candidateArea && activeFilter === 'recommended'
+                ? `Vagas em ${candidateArea}`
+                : 'Vagas para você'}
+            </h2>
+            {candidateArea && activeFilter === 'recommended' && (
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Filtradas com base na área profissional do seu currículo.
+              </p>
+            )}
+          </div>
           <span className="text-xs font-semibold text-muted-foreground">
             {loading ? 'Carregando…' : total ? `${total} oportunidades` : '0 oportunidades'}
           </span>
@@ -152,7 +227,11 @@ export function JobsSearchPage() {
           <div className="rounded-2xl border border-dashed border-border bg-card/60 p-12 text-center">
             <Search className="mx-auto size-8 text-muted-foreground/60" />
             <p className="mt-4 text-base font-extrabold text-foreground">Nenhuma oportunidade encontrada</p>
-            <p className="mt-2 text-sm text-muted-foreground">Tente alterar os termos da busca ou selecionar outro filtro.</p>
+            <p className="mt-2 text-sm text-muted-foreground">
+              {candidateArea
+                ? `Não encontramos vagas abertas no momento para a área "${candidateArea}". Você pode buscar em todas as áreas ou ajustar os termos.`
+                : 'Tente alterar os termos da busca ou selecionar outro filtro.'}
+            </p>
           </div>
         )}
       </main>

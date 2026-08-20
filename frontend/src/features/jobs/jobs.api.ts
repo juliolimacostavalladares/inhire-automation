@@ -1,10 +1,12 @@
 import { http } from '@/lib/api/http'
 import type { Job } from './jobs.data'
+import { detectJobAreaFromTitle } from './job-area'
 
 export interface JobsQuery {
   page?: number
   limit?: number
   title?: string
+  area?: string
   workplaceType?: string
   location?: string
   status?: 'PUBLISHED' | 'CLOSED'
@@ -46,6 +48,8 @@ interface ApiJob {
 export interface JobsResponse {
   data: ApiJob[]
   meta: { total: number; page: number; limit: number; pages: number }
+  candidateArea?: string
+  profileComplete?: boolean
 }
 
 function formatPublishedLabel(dateValue: string | null) {
@@ -81,7 +85,7 @@ export function mapApiJob(apiJob: ApiJob): Job {
     workplace: workplaceLabel(apiJob.workplaceType),
     seniority: 'A definir',
     contract: 'Tempo integral',
-    area: apiJob.tenant.name,
+    area: detectJobAreaFromTitle(apiJob.title),
     publishedLabel: formatPublishedLabel(apiJob.publishedAt ?? apiJob.firstSeenAt),
     recent: firstSeen.getTime() >= recentLimit,
     description: textFromHtml(apiJob.descriptionHtml) || 'Confira os detalhes completos desta oportunidade na página oficial da InHire.',
