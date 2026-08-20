@@ -1,3 +1,4 @@
+import { HttpModule } from '@nestjs/axios';
 import { BullModule } from '@nestjs/bullmq';
 import { Module } from '@nestjs/common';
 import { InhireModule } from '../../providers/inhire/inhire.module';
@@ -8,6 +9,7 @@ import { DiscoverTenantsUseCase } from '../../../app/useCases/crawler/discover-t
 
 @Module({
   imports: [
+    HttpModule,
     InhireModule,
     BullModule.registerQueue(
       { name: DISCOVERY_QUEUE },
