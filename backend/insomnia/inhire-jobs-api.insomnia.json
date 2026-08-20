@@ -330,13 +330,46 @@
       "_type": "request"
     },
     {
-      "_id": "req_health_ai",
+      "_id": "req_ai_models",
       "parentId": "fld_health",
       "modified": 1787079600000,
       "created": 1787079600000,
-      "url": "{{ _.baseUrl }}/health/ai",
-      "name": "Health check do Hub de IA (9Router)",
-      "description": "Verifica a conectividade com o 9Router/OpenAI provider e lista os modelos disponíveis.",
+      "url": "{{ _.baseUrl }}/ai/models",
+      "name": "Modelos disponíveis do provedor de IA",
+      "description": "Lista todos os modelos de IA disponíveis pelo provedor (ex: 9Router / OpenAI). Filtro opcional por category.",
+      "method": "GET",
+      "body": {},
+      "parameters": [
+        {
+          "id": "p_ai_category",
+          "name": "category",
+          "value": "chat",
+          "description": "chat, image, tts ou embedding",
+          "disabled": true
+        }
+      ],
+      "headers": [
+        { "name": "X-API-Key", "value": "{{ _.apiKey }}" }
+      ],
+      "authentication": {},
+      "metaSortKey": -50,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_ai_health",
+      "parentId": "fld_health",
+      "modified": 1787079600000,
+      "created": 1787079600000,
+      "url": "{{ _.baseUrl }}/ai/health",
+      "name": "Health check da IA",
+      "description": "Verifica a saúde e conectividade do provedor de inteligência artificial.",
       "method": "GET",
       "body": {},
       "parameters": [],
@@ -344,7 +377,7 @@
         { "name": "X-API-Key", "value": "{{ _.apiKey }}" }
       ],
       "authentication": {},
-      "metaSortKey": -100,
+      "metaSortKey": -40,
       "isPrivate": false,
       "settingStoreCookies": true,
       "settingSendCookies": true,

@@ -19,6 +19,7 @@ import { JobsModule } from './presentation/nest/modules/jobs.module';
 import { TenantsModule } from './presentation/nest/modules/tenants.module';
 import { RunsModule } from './presentation/nest/modules/runs.module';
 import { HealthModule } from './presentation/nest/modules/health.module';
+import { AiPresentationModule } from './presentation/nest/modules/ai.presentation.module';
 
 @Module({
   imports: [
@@ -41,6 +42,7 @@ import { HealthModule } from './presentation/nest/modules/health.module';
     PrismaModule,
     QueuesModule,
     HealthModule,
+    AiPresentationModule,
     AuthModule,
     ProfileModule,
     ThrottlerModule.forRoot([{ ttl: 60_000, limit: 120 }]),
