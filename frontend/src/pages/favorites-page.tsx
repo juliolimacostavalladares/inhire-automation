@@ -1,16 +1,27 @@
-import { Bookmark, Heart } from 'lucide-react'
+import { Bookmark, Heart, UserRound } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { CandidateTopbar } from '@/components/layout/candidate-topbar'
 import { MyAreaSidebar } from '@/components/layout/my-area-sidebar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
-import { jobs } from '@/features/jobs/jobs.data'
-
-const favoriteIds = ['brq-fullstack', 'nubank-product-designer', 'finance-analyst']
+import { useAuth } from '@/features/auth/use-auth'
+import { useProfileStore } from '@/features/profile/profile.store'
+import { useJobs } from '@/features/jobs/use-jobs'
 
 export function FavoritesPage() {
-  const favoriteJobs = jobs.filter((job) => favoriteIds.includes(job.id))
+  const { user } = useAuth()
+  const { profile } = useProfileStore()
+  const { jobs, favorites } = useJobs()
+
+  const favoriteJobs = jobs.filter((job) => favorites.has(job.id))
+
+  const userInitials = (user?.name || 'Talento')
+    .split(' ')
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((p) => p[0].toUpperCase())
+    .join('')
 
   return (
     <div className="min-h-svh bg-canvas">
@@ -23,31 +34,58 @@ export function FavoritesPage() {
           <p className="mt-2 text-sm text-muted-foreground">Gerencie seu perfil e as oportunidades da sua jornada.</p>
           <Card className="mt-8 flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
             <div className="flex items-center gap-4">
-              <div className="grid size-14 place-items-center rounded-full bg-secondary text-sm font-extrabold text-secondary-foreground">MA</div>
-              <div><p className="text-lg font-extrabold">Marina Alves</p><p className="text-sm text-muted-foreground">Analista de Produto · Remoto · Pleno</p></div>
+              <div className="grid size-14 place-items-center rounded-full bg-primary text-sm font-extrabold text-primary-foreground">
+                {userInitials || <UserRound />}
+              </div>
+              <div>
+                <p className="text-lg font-extrabold">{user?.name || 'Talento Cadastrado'}</p>
+                <p className="text-sm text-muted-foreground">
+                  {[
+                    profile?.professionalTitle || 'Profissional',
+                    profile?.location || 'Brasil',
+                    profile?.seniority || 'Sênior',
+                  ].join(' · ')}
+                </p>
+              </div>
             </div>
-            <Button variant="outline">Editar perfil</Button>
+            <Button variant="outline" asChild>
+              <Link to="/onboarding/perfil">Editar perfil</Link>
+            </Button>
           </Card>
           <h2 className="mt-10 text-2xl font-extrabold tracking-[-0.03em]">Vagas salvas</h2>
           <div className="mt-5 space-y-4">
-            {favoriteJobs.map((job) => (
-              <Card key={job.id} className="flex flex-col gap-5 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
-                <div className="flex min-w-0 items-center gap-4">
-                  <div className="grid size-12 shrink-0 place-items-center rounded-lg border border-border bg-background text-sm font-extrabold">{job.initials}</div>
-                  <div className="min-w-0">
-                    <p className="truncate text-xs font-bold text-muted-foreground">{job.company}</p>
-                    <h2 className="mt-1 truncate text-lg font-extrabold">{job.title}</h2>
-                    <div className="mt-2 flex flex-wrap gap-2">
-                      <Badge variant="secondary">{job.location}</Badge><Badge variant="secondary">{job.workplace}</Badge><Badge variant="secondary">{job.contract}</Badge>
+            {favoriteJobs.length === 0 ? (
+              <div className="rounded-xl border border-dashed border-border bg-card/40 p-8 text-center text-sm text-muted-foreground">
+                <Heart className="mx-auto size-8 text-muted-foreground/60 mb-3" />
+                <p className="font-semibold text-foreground">Você ainda não favoritou nenhuma vaga.</p>
+                <p className="mt-1">Explore o portal e clique no coração das vagas que desejar acompanhar.</p>
+                <Button className="mt-4" asChild>
+                  <Link to="/vagas">Ver vagas disponíveis</Link>
+                </Button>
+              </div>
+            ) : (
+              favoriteJobs.map((job) => (
+                <Card key={job.id} className="flex flex-col gap-5 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
+                  <div className="flex min-w-0 items-center gap-4">
+                    <div className="grid size-12 shrink-0 place-items-center rounded-lg border border-border bg-background text-sm font-extrabold uppercase">
+                      {job.initials || job.company.slice(0, 2)}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="truncate text-xs font-bold text-muted-foreground">{job.company}</p>
+                      <h2 className="mt-1 truncate text-lg font-extrabold">{job.title}</h2>
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        {job.location && <Badge variant="secondary">{job.location}</Badge>}
+                        {job.workplace && <Badge variant="secondary">{job.workplace}</Badge>}
+                        {job.contract && <Badge variant="secondary">{job.contract}</Badge>}
+                      </div>
                     </div>
                   </div>
-                </div>
-                <Button asChild className="sm:shrink-0"><Link to={`/vagas/${job.id}`}>Ver vaga <Bookmark /></Link></Button>
-              </Card>
-            ))}
-          </div>
-          <div className="mt-8 flex items-center gap-3 rounded-lg border border-dashed border-border p-5 text-sm text-muted-foreground">
-            <Heart className="size-5 text-primary" /> Salve vagas para acompanhar oportunidades que combinam com você.
+                  <Button asChild className="sm:shrink-0">
+                    <Link to={`/vagas/${job.id}`}>Ver vaga <Bookmark className="size-4" /></Link>
+                  </Button>
+                </Card>
+              ))
+            )}
           </div>
         </section>
       </main>
