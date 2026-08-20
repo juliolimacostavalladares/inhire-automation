@@ -18,6 +18,7 @@ interface ApiTenant {
   id: string
   slug: string
   name: string
+  logoUrl?: string | null
 }
 
 interface ApiJob {
@@ -73,6 +74,7 @@ export function mapApiJob(apiJob: ApiJob): Job {
     id: apiJob.id,
     externalId: apiJob.externalId,
     company: apiJob.tenant.name,
+    logoUrl: apiJob.tenant.logoUrl ?? null,
     initials: apiJob.tenant.name.slice(0, 3).toUpperCase(),
     title: apiJob.title,
     location: apiJob.location ?? 'Brasil',

@@ -5,6 +5,8 @@ services:
       POSTGRES_USER: inhire
       POSTGRES_PASSWORD: inhire
       POSTGRES_DB: inhire
+    ports:
+      - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -16,6 +18,8 @@ services:
   redis:
     image: redis:7-alpine
     command: redis-server --appendonly yes
+    ports:
+      - "6379:6379"
     volumes:
       - redis_data:/data
     healthcheck:

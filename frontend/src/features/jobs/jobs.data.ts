@@ -2,6 +2,7 @@ export interface Job {
   id: string
   externalId?: string
   company: string
+  logoUrl?: string | null
   initials: string
   title: string
   location: string

@@ -2,6 +2,7 @@ import { Bookmark } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
+import { CompanyLogo } from '@/components/brand/company-logo'
 import { cn } from '@/lib/utils'
 import type { Job } from './jobs.data'
 
@@ -24,9 +25,12 @@ export function JobCard({ job, selected, favorite, onSelect, onFavorite }: JobCa
       aria-current={selected ? 'true' : undefined}
     >
       <div className="flex gap-4">
-        <div className="grid size-11 shrink-0 place-items-center rounded-md border border-border bg-background text-xs font-extrabold text-foreground">
-          {job.initials}
-        </div>
+        <CompanyLogo
+          logoUrl={job.logoUrl}
+          company={job.company}
+          initials={job.initials}
+          className="size-11"
+        />
 
         <div className="min-w-0 flex-1">
           <div className="flex items-start justify-between gap-3">

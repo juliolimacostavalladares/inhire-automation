@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { ArrowLeft, Bookmark, Check, ExternalLink, MapPin, Share2 } from 'lucide-react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { Logo } from '@/components/brand/logo'
+import { CompanyLogo } from '@/components/brand/company-logo'
 import { ThemeToggle } from '@/components/theme/theme-toggle'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -62,9 +63,12 @@ export function JobDetailsPage() {
           <Card className="overflow-hidden">
             <div className="p-6 sm:p-8 lg:p-10">
               <div className="flex items-start gap-4 sm:gap-5">
-                <div className="grid size-14 shrink-0 place-items-center rounded-lg border border-border bg-background text-sm font-extrabold sm:size-16">
-                  {job.initials}
-                </div>
+                <CompanyLogo
+                  logoUrl={job.logoUrl}
+                  company={job.company}
+                  initials={job.initials}
+                  className="size-14 rounded-lg text-sm sm:size-16"
+                />
                 <div className="min-w-0">
                   <p className="text-sm font-extrabold text-muted-foreground">{job.company}</p>
                   <h1 className="mt-2 text-3xl font-extrabold leading-[1.05] tracking-[-0.045em] sm:text-4xl lg:text-5xl">

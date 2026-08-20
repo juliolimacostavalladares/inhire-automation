@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
+import { CompanyLogo } from '@/components/brand/company-logo'
 import { cn } from '@/lib/utils'
 import type { Job } from './jobs.data'
 
@@ -48,9 +49,12 @@ export function JobDetailPanel({ job, detailError, favorite, onFavorite, onClose
           </div>
 
           <div className="mt-6 flex items-center gap-4">
-            <div className="grid size-14 place-items-center rounded-lg border border-border bg-card text-sm font-extrabold">
-              {job.initials}
-            </div>
+            <CompanyLogo
+              logoUrl={job.logoUrl}
+              company={job.company}
+              initials={job.initials}
+              className="size-14 rounded-lg text-sm"
+            />
             <div>
               <p className="font-extrabold">{job.company}</p>
               <p className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
@@ -82,7 +86,7 @@ export function JobDetailPanel({ job, detailError, favorite, onFavorite, onClose
 
           <section>
             <h3 className="text-sm font-extrabold">Sobre a vaga</h3>
-            <p className="mt-3 text-sm leading-6 text-muted-foreground">{job.description}</p>
+            <article className="mt-3 text-sm leading-6 text-muted-foreground" dangerouslySetInnerHTML={{ __html: job.descriptionHtml ?? job.description }}></article>
           </section>
 
           <section className="mt-7">

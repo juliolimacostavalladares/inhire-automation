@@ -2,7 +2,7 @@ import { Controller, Get, INestApplication, UseGuards } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { Test } from "@nestjs/testing";
 import request from "supertest";
-import { ApiKeyGuard } from "../src/common/api-key.guard";
+import { ApiKeyGuard } from "../src/presentation/http/guards/api-key.guard";
 
 @Controller("protected")
 @UseGuards(ApiKeyGuard)

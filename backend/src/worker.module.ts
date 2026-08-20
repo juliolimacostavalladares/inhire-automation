@@ -1,13 +1,17 @@
-import { Module } from "@nestjs/common";
-import { ConfigModule } from "@nestjs/config";
-import { CollectionModule } from "./collection/collection.module";
-import { loadEnvironment } from "./config/environment";
-import { DiscoveryModule } from "./discovery/discovery.module";
-import { PrismaModule } from "./prisma/prisma.module";
-import { QueuesModule } from "./queues/queues.module";
+import { Module } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
+import { loadEnvironment } from './infra/config/environment';
+import { PrismaModule } from './infra/databases/prisma/prisma.module';
+import { LoggingModule } from './infra/logging/logging.module';
+import { AiModule } from './infra/providers/ai/ai.module';
+import { QueuesModule } from './infra/providers/queues/queues.module';
+import { CollectionModule } from './infra/services/crawler/collection.module';
+import { DiscoveryModule } from './infra/services/crawler/discovery.module';
 
 @Module({
   imports: [
+    LoggingModule,
+    AiModule,
     ConfigModule.forRoot({
       isGlobal: true,
       load: [loadEnvironment],

@@ -2,6 +2,7 @@ import { Bookmark, Heart, UserRound } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { CandidateTopbar } from '@/components/layout/candidate-topbar'
 import { MyAreaSidebar } from '@/components/layout/my-area-sidebar'
+import { CompanyLogo } from '@/components/brand/company-logo'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -67,9 +68,12 @@ export function FavoritesPage() {
               favoriteJobs.map((job) => (
                 <Card key={job.id} className="flex flex-col gap-5 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
                   <div className="flex min-w-0 items-center gap-4">
-                    <div className="grid size-12 shrink-0 place-items-center rounded-lg border border-border bg-background text-sm font-extrabold uppercase">
-                      {job.initials || job.company.slice(0, 2)}
-                    </div>
+                    <CompanyLogo
+                      logoUrl={job.logoUrl}
+                      company={job.company}
+                      initials={job.initials || job.company.slice(0, 2)}
+                      className="size-12 shrink-0 rounded-lg text-sm uppercase"
+                    />
                     <div className="min-w-0">
                       <p className="truncate text-xs font-bold text-muted-foreground">{job.company}</p>
                       <h2 className="mt-1 truncate text-lg font-extrabold">{job.title}</h2>

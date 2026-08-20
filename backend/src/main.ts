@@ -4,10 +4,13 @@ import { NestFactory } from "@nestjs/core";
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
 import helmet from "helmet";
 import { AppModule } from "./app.module";
-import type { Environment } from "./config/environment";
+import type { Environment } from "./infra/config/environment";
+import { AppLoggerService } from "./infra/logging/app-logger.service";
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, { bufferLogs: true });
+  const logger = app.get(AppLoggerService);
+  app.useLogger(logger);
   const config = app.get(ConfigService<Environment, true>);
   app.use(
     helmet({
