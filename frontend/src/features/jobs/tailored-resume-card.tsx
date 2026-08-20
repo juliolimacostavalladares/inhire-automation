@@ -68,7 +68,8 @@ export function TailoredResumeCard({ jobId, jobTitle }: TailoredResumeCardProps)
   }, [])
 
   const handleGenerate = (forceRegenerate = false) => {
-    if (!user || loading) return
+    // Guard: prevent double invocation (React StrictMode, rapid clicks)
+    if (!user || loading || esRef.current !== null) return
 
     const token = localStorage.getItem('inhire_token') ?? ''
     const baseUrl = (import.meta.env.VITE_API_URL as string | undefined) ?? ''
@@ -83,8 +84,12 @@ export function TailoredResumeCard({ jobId, jobTitle }: TailoredResumeCardProps)
     setError(null)
     setProgress(null)
 
-    // Close any existing connection
-    esRef.current?.close()
+    // Close any existing connection (reset ref before guard might narrow it)
+    const prevEs = esRef.current as EventSource | null
+    if (prevEs) {
+      prevEs.close()
+      esRef.current = null
+    }
 
     const es = new EventSource(url)
     esRef.current = es
@@ -124,16 +129,16 @@ export function TailoredResumeCard({ jobId, jobTitle }: TailoredResumeCardProps)
       esRef.current = null
     })
 
-    // Handle EventSource network error (no data)
+    // Handle EventSource network-level error (connection dropped, CORS, etc.)
+    // Note: custom 'error' event from server is handled above; this handles transport errors
     es.onerror = (_e) => {
-      // Only set error if not already handled by custom error event
-      if (loading) {
-        setError('Conexão com o servidor perdida. Tente novamente.')
+      if (esRef.current === es) {
+        setError('Conexão com o servidor foi interrompida. Tente novamente.')
         setLoading(false)
         setProgress(null)
+        es.close()
+        esRef.current = null
       }
-      es.close()
-      esRef.current = null
     }
   }
 

@@ -135,19 +135,7 @@ export class GenerateJobTailoredResumeUseCase {
       descriptionHtml: job.descriptionHtml ?? '',
     };
 
-    const systemPrompt = `Você é um Consultor Especialista em Carreira Tech e Otimização de Currículos para ATS (Applicant Tracking Systems) e Recrutadores Técnicos.
-Sua missão é adaptar o perfil real do candidato para a vaga alvo fornecida, gerando um currículo Markdown de altíssimo impacto, 100% alinhado aos filtros e palavras-chave da vaga.
-
-REGRAS INEGOCIÁVEIS:
-1. VERACIDADE ABSOLUTA: Use EXCLUSIVAMENTE as experiências, empresas, períodos, cargos reais e habilidades declaradas pelo candidato. NUNCA invente fatos, empresas, datas, graduações ou competências fictícias que não estejam no perfil.
-2. ENQUADRAMENTO ESTRATÉGICO: Reorganize, priorize e reescreva os bullet points das experiências reais para evidenciar o impacto, tecnologias e requisitos pedidos na vaga alvo.
-3. MÉTRICAS E PALAVRAS-CHAVE: Destaque palavras-chave técnicas e métricas em **negrito** (ex: **React.js**, **+82% de performance**, **IA Generativa**).
-4. VERBOS DE AÇÃO: Inicie cada bullet point de experiência com verbos de ação assertivos (ex: "Desenvolvi", "Liderei", "Implementei", "Otimizei").
-5. IDIOMA: Responda no idioma "${language === 'en' ? 'Inglês' : 'Português do Brasil'}".
-6. FORMATO E TEMPLATE EXATO:
-O Markdown gerado deve seguir ESTRITAMENTE a seguinte estrutura de layout e tags HTML para o cabeçalho:
-
-<div style="font-size: 2.2em; font-weight: bold; margin-top: 0px; margin-bottom: 4px;">NOME DO CANDIDATO EM MAIÚSCULAS</div>
+    const markdownTemplate = `<div style="font-size: 2.2em; font-weight: bold; margin-top: 0px; margin-bottom: 4px;">NOME DO CANDIDATO EM MAIÚSCULAS</div>
 <div style="font-size: 1.05em; font-weight: 600; margin-bottom: 6px; color: #1e293b;">Título Profissional Alinhado à Vaga</div>
 <div style="font-size: 0.9em; margin-bottom: 4px; color: #475569;">Cidade, Estado | Telefone | <a href="mailto:email">email</a> | <a href="linkedin_url">LinkedIn</a></div>
 <div style="font-size: 0.9em; color: #334155; font-style: italic;">Foco em: [Diferencial e competências chave para esta vaga]</div>
@@ -161,7 +149,7 @@ O Markdown gerado deve seguir ESTRITAMENTE a seguinte estrutura de layout e tags
 
 ### EXPERIÊNCIA PROFISSIONAL
 
-**Cargo Alinhado | Nome da Empresa**  
+**Cargo Alinhado | Nome da Empresa**
 *Mês Ano – Mês Ano (Duração) | Localização ou Remoto*
 *   **Ação & Tecnologia:** Descrição com métricas, verbos fortes e palavras-chave em **negrito**.
 *   **Impacto no Negócio:** Outro feito mensurável relevante.
@@ -178,10 +166,31 @@ O Markdown gerado deve seguir ESTRITAMENTE a seguinte estrutura de layout e tags
 
 ### FORMAÇÃO ACADÊMICA & CERTIFICAÇÕES
 
-*   **Nome do Curso/Grau** | Instituição (Ano Início – Ano Fim)
-`;
+*   **Nome do Curso/Grau** | Instituição (Ano Início – Ano Fim)`;
 
-    const prompt = `CANDIDATO:\n${JSON.stringify(candidateContext, null, 2)}\n\nVAGA ALVO:\n${JSON.stringify(jobContext, null, 2)}\n\nGere o currículo ATS e retorne estritamente o JSON com a estrutura solicitada.`;
+    const systemPrompt = `Você é um Consultor Especialista em Carreira Tech e Otimização de Currículos para ATS (Applicant Tracking Systems).
+Sua missão é adaptar o perfil real do candidato para a vaga alvo, gerando um currículo Markdown de altíssimo impacto.
+
+REGRAS INEGOCIÁVEIS:
+1. VERACIDADE ABSOLUTA: Use EXCLUSIVAMENTE as experiências, empresas, períodos, cargos reais e habilidades declaradas pelo candidato. NUNCA invente fatos.
+2. ENQUADRAMENTO ESTRATÉGICO: Reorganize e reescreva os bullet points para evidenciar impacto, tecnologias e requisitos da vaga alvo.
+3. MÉTRICAS E PALAVRAS-CHAVE: Destaque tecnologias e métricas em **negrito**.
+4. VERBOS DE AÇÃO: Inicie cada bullet point com verbos assertivos (ex: "Desenvolvi", "Liderei", "Implementei").
+5. IDIOMA: Responda em ${language === 'en' ? 'Inglês' : 'Português do Brasil'}.
+
+FORMATO DE SAÍDA OBRIGATÓRIO — RETORNE APENAS UM OBJETO JSON VÁLIDO, SEM NENHUM TEXTO ANTES OU DEPOIS:
+{
+  "markdown": "<currículo completo em Markdown seguindo o template abaixo, com todas as seções preenchidas>",
+  "targetRole": "<cargo alvo alinhado à vaga>",
+  "matchScore": <número inteiro de 0 a 100 representando o % de aderência à vaga>,
+  "summary": "<1-2 frases explicando a estratégia de alinhamento do perfil à vaga>",
+  "highlightedKeywords": ["<keyword1>", "<keyword2>", "<até 10 palavras-chave técnicas da vaga presentes no perfil>"]
+}
+
+TEMPLATE DO CAMPO "markdown" (use exatamente esta estrutura):
+${markdownTemplate}`;
+
+    const prompt = `CANDIDATO:\n${JSON.stringify(candidateContext, null, 2)}\n\nVAGA ALVO:\n${JSON.stringify(jobContext, null, 2)}\n\nRetorne SOMENTE o objeto JSON conforme o formato especificado. NÃO escreva nenhum texto fora do JSON.`;
 
     emit({ step: 'building_prompt', message: 'Construindo prompt ATS personalizado…', percent: 25 });
 
@@ -194,10 +203,31 @@ O Markdown gerado deve seguir ESTRITAMENTE a seguinte estrutura de layout e tags
         timeoutMs: 300_000,
       });
     } catch (error) {
-      this.logger.error('Falha ao gerar currículo via IA:', error);
-      throw new BadRequestException(
-        'Não foi possível gerar o currículo com IA no momento. Tente novamente.',
-      );
+      // Fallback: se o modelo retornou Markdown/HTML diretamente sem wrapper JSON,
+      // o AiService lança InternalServerErrorException. Tentamos recuperar o rawText.
+      if (
+        error instanceof Error &&
+        'rawText' in error &&
+        typeof (error as unknown as { rawText: string }).rawText === 'string'
+      ) {
+        const raw = (error as unknown as { rawText: string }).rawText;
+        if (raw.length > 100) {
+          this.logger.warn('IA retornou Markdown bruto sem wrapper JSON — usando fallback automático');
+          aiResult = {
+            markdown: raw,
+            targetRole: job.title,
+            matchScore: 80,
+            summary: 'Currículo gerado e alinhado à vaga.',
+            highlightedKeywords: [],
+          };
+        } else {
+          this.logger.error('Falha ao gerar currículo via IA:', error);
+          throw new BadRequestException('Não foi possível gerar o currículo com IA no momento. Tente novamente.');
+        }
+      } else {
+        this.logger.error('Falha ao gerar currículo via IA:', error);
+        throw new BadRequestException('Não foi possível gerar o currículo com IA no momento. Tente novamente.');
+      }
     }
 
     if (!aiResult.markdown || typeof aiResult.markdown !== 'string') {

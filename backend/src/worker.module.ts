@@ -7,6 +7,7 @@ import { AiModule } from './infra/providers/ai/ai.module';
 import { QueuesModule } from './infra/providers/queues/queues.module';
 import { CollectionModule } from './infra/services/crawler/collection.module';
 import { DiscoveryModule } from './infra/services/crawler/discovery.module';
+import { JobsModule } from './presentation/nest/modules/jobs.module';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { DiscoveryModule } from './infra/services/crawler/discovery.module';
     QueuesModule,
     CollectionModule,
     DiscoveryModule,
+    JobsModule,
   ],
 })
 export class WorkerModule {}
