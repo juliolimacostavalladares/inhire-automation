@@ -16,7 +16,6 @@ import {
 } from 'lucide-react'
 import { Link, NavLink, useNavigate, useParams } from 'react-router-dom'
 import { Logo } from '@/components/brand/logo'
-import { ThemeToggle } from '@/components/theme/theme-toggle'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -55,7 +54,6 @@ function BackofficeSidebar() {
       </div>
       <div className="mt-auto flex items-center justify-between rounded-lg border border-border bg-card p-3">
         <div><p className="text-sm font-extrabold">Admin InHire</p><p className="text-xs text-muted-foreground">Operações</p></div>
-        <ThemeToggle />
       </div>
     </aside>
   )
