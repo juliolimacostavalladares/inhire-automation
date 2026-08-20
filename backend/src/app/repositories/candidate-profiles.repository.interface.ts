@@ -1,4 +1,4 @@
-import { ICandidateProfileInputDTO, ICandidateProfileOutputDTO } from '../../domain/dtos';
+import { ICandidateProfileInputDTO, ICandidateProfileOutputDTO } from '../../domain/dtos/candidate-profile.dtos';
 
 export const CANDIDATE_PROFILES_REPOSITORY_TOKEN = Symbol.for('CANDIDATE_PROFILES_REPOSITORY_TOKEN');
 

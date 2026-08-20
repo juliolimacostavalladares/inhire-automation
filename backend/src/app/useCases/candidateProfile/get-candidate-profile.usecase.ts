@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { ICandidateProfileOutputDTO } from '../../../domain/dtos';
+import { ICandidateProfileOutputDTO } from '../../../domain/dtos/candidate-profile.dtos';
 import {
   CANDIDATE_PROFILES_REPOSITORY_TOKEN,
   ICandidateProfilesRepository,

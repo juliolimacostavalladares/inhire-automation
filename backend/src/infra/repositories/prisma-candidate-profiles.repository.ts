@@ -3,7 +3,7 @@ import { Prisma } from '@prisma/client';
 import {
   ICandidateProfileInputDTO,
   ICandidateProfileOutputDTO,
-} from '../../domain/dtos';
+} from '../../domain/dtos/candidate-profile.dtos';
 import {
   CandidateProfileSource,
   CandidateProfileStatus,

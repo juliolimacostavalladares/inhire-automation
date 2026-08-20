@@ -1,6 +1,6 @@
 import { BadRequestException, Inject, Injectable } from '@nestjs/common';
 import pdfParse from 'pdf-parse';
-import { ICandidateProfileOutputDTO } from '../../../domain/dtos';
+import { ICandidateProfileOutputDTO } from '../../../domain/dtos/candidate-profile.dtos';
 import {
   CandidateProfileSource,
   CandidateProfileStatus,

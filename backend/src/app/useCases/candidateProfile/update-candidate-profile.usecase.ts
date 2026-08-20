@@ -2,7 +2,7 @@ import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import {
   ICandidateProfileInputDTO,
   ICandidateProfileOutputDTO,
-} from '../../../domain/dtos';
+} from '../../../domain/dtos/candidate-profile.dtos';
 import { CandidateProfileStatus } from '../../../domain/enums';
 import {
   CANDIDATE_PROFILES_REPOSITORY_TOKEN,

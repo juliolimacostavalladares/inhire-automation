@@ -3,7 +3,7 @@ import {
   AI_PROVIDER_TOKEN,
   IAiProvider,
 } from '../../providers/ai-provider.interface';
-import {
+import type {
   IExtractedCandidateProfileDTO,
   IExperienceEntryDTO,
   IEducationEntryDTO,

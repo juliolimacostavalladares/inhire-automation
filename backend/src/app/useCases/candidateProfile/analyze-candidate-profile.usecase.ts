@@ -12,7 +12,7 @@ import {
   CANDIDATE_PROFILES_REPOSITORY_TOKEN,
   ICandidateProfilesRepository,
 } from '../../repositories/candidate-profiles.repository.interface';
-import {
+import type {
   ICandidateProfileAnalysisDTO,
   IExperienceEntryDTO,
   IEducationEntryDTO,
