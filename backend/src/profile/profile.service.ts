@@ -34,13 +34,18 @@ export class ProfileService {
       throw new BadRequestException("Informe uma URL válida de perfil do LinkedIn.");
     }
 
-    const parsed = await pdfParse(file.buffer).catch(() => {
+    // Verifica se o PDF é legível e extrai o texto para validação de conteúdo mínimo
+    const rawParsed = await pdfParse(file.buffer).catch(() => {
       throw new BadRequestException("Não foi possível ler o PDF enviado.");
     });
-    const text = parsed.text.replace(/\u0000/g, "").trim();
-    if (text.length < 30) throw new BadRequestException("O PDF não contém texto suficiente para extrair o perfil.");
+    if (rawParsed.text.replace(/\s/g, "").length < 20) {
+      throw new BadRequestException("O PDF não contém texto suficiente para extrair o perfil.");
+    }
 
-    const extracted = parseLinkedInPdf(text);
+    // Extração estruturada com font-size detection (pdfminer approach)
+    const extracted = await parseLinkedInPdf(file.buffer).catch(() => {
+      throw new BadRequestException("Não foi possível processar a estrutura do PDF.");
+    });
 
     const jsonData = {
       professionalTitle: extracted.professionalTitle,
@@ -62,7 +67,7 @@ export class ProfileService {
         sourceFileName: file.originalname.slice(0, 255),
         sourceFileMime: file.mimetype,
         sourceFileSize: file.size,
-        extractedText: text,
+        extractedText: rawParsed.text.replace(/\u0000/g, "").trim(),
         sourceImportedAt: new Date(),
         ...jsonData,
       },
@@ -73,7 +78,7 @@ export class ProfileService {
         sourceFileName: file.originalname.slice(0, 255),
         sourceFileMime: file.mimetype,
         sourceFileSize: file.size,
-        extractedText: text,
+        extractedText: rawParsed.text.replace(/\u0000/g, "").trim(),
         sourceImportedAt: new Date(),
         reviewedAt: null,
         ...jsonData,
