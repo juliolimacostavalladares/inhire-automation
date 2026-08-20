@@ -1,28 +1,18 @@
 /**
- * LinkedIn PDF parser — estrutura extraída do formato oficial do LinkedIn.
+ * LinkedIn PDF Parser — baseado na metodologia robusta de análise de layout do PDFMiner / LinkedIn PDF Parser.
  *
- * Formato das seções no PDF:
- *
- * Experience:
- *   Company
- *   Title
- *   Month Year - Month Year (duration) | Month Year - Present (duration)
- *   Location (opcional — curto, sem dígitos)
- *   description lines…
- *
- * Education:
- *   School
- *   Degree, Field · (Month Year - Month Year)
- *
- * NOTA: LinkedIn usa \u00a0 (non-breaking space) como separador em datas.
- * Normalizamos para espaço regular antes de qualquer parse.
+ * Em vez de assumir que todo PDF de currículo possui exatamente a mesma ordem ou formato de campos,
+ * este parser analisa os objetos de texto e suas propriedades de layout (tamanho de fonte/height,
+ * seções reconhecidas, sequenciamento de blocos de empresa/cargo/datas/educação).
  */
 
-// ─── Tipos públicos ──────────────────────────────────────────────────────────
+import pdfParse from "pdf-parse";
+
+// ─── Tipos Exportados ────────────────────────────────────────────────────────
 
 export interface ExperienceEntry {
   company: string;
-  title: string;
+  title: string | null;
   startMonth: string | null;
   startYear: string | null;
   endMonth: string | null;
@@ -54,199 +44,251 @@ export interface ParsedProfile {
   education: EducationEntry[];
 }
 
-// ─── Helpers internos ────────────────────────────────────────────────────────
+export interface LayoutItem {
+  text: string;
+  h: number;
+  bold: boolean;
+}
 
-const PAGE_RE = /^Page\s+\d+\s+of\s+\d+$/i;
+// ─── Regex e Dicionários ─────────────────────────────────────────────────────
 
-/** LinkedIn usa \xa0 como separador nas datas — normaliza para espaço regular. */
-function normalize(s: string): string {
+const MONTHS =
+  "january|february|march|april|may|june|july|august|september|october|november|december" +
+  "|janeiro|fevereiro|março|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro" +
+  "|jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec";
+
+// Regex flexível para intervalo de datas
+const DATE_RANGE_RE = new RegExp(
+  `^(?:[·•]\\s*)?\\(?(?:(${MONTHS})\\s+)?(\\d{4})\\s*[-–]\\s*(present|presente|(?:(${MONTHS})\\s+)?(\\d{4}))`,
+  "i",
+);
+
+const IS_DATE_RE = new RegExp(
+  `^(?:[·•]\\s*)?\\(?(?:(?:${MONTHS})\\s+)?\\d{4}\\s*[-–]\\s*(?:present|presente|(?:(?:${MONTHS})\\s+)?\\d{4})`,
+  "i",
+);
+
+const DURATION_ONLY_RE = /^\(\d[\d\w\s,.]+\)$/;
+const PHONE_RE = /^\+?[\d\s\-(). ]{7,20}(?:\s*\(Mobile\))?$/i;
+
+const SECTION_MAIN_NAMES = new Set([
+  "experience", "experiência", "experiencia",
+  "education", "educação", "educacao", "formação", "formacao",
+  "summary", "sobre", "resumo",
+]);
+
+const SECTION_AUX_NAMES = new Set([
+  "contact", "contato",
+  "skills", "top skills", "competências", "habilidades",
+  "certifications", "certificações", "languages", "idiomas",
+  "licenses & certifications", "accomplishments", "volunteer experience",
+  "courses", "projects", "publications", "honors & awards",
+]);
+
+function normalizeText(s: string): string {
   return s.replace(/[\u00a0\u202f\u2009]/g, " ").trim();
 }
 
-/** "May 2025 - Present (1 year 4 months)" ou "February 2023 - May 2025 (2 years)" */
-const DATE_LINE_RE =
-  /^([A-Za-záàãâéêíóôõú]+\s+\d{4}|\d{4})\s*[-–]\s*(Present|Presente|[A-Za-záàãâéêíóôõú]+\s+\d{4}|\d{4})(?:\s*\([^)]+\))?$/i;
+function parseDateString(s: string) {
+  const clean = normalizeText(s).replace(/\(.*\)$/, "").replace(/[()·•]/g, "").trim();
+  const match = DATE_RANGE_RE.exec(normalizeText(s));
 
-/** "· (February 2019 - December 2021)" ou "(2003 - 2013)" */
-const EDU_DATE_RE =
-  /(?:[·•]\s*)?\(([A-Za-záàãâéêíóôõú]+\s+\d{4}|\d{4})\s*[-–]\s*([A-Za-záàãâéêíóôõú]+\s+\d{4}|\d{4})\)/i;
+  if (match) {
+    const startMonth = match[1] ?? null;
+    const startYear = match[2] ?? null;
+    const isOngoing = /present|presente/i.test(match[3]);
+    const endMonth = isOngoing ? null : match[4] ?? null;
+    const endYear = isOngoing ? null : match[5] ?? null;
 
-const PHONE_RE = /^\+?[\d\s\-(). ]{7,20}(?:\s*\(Mobile\))?$/i;
-
-/** Seções conhecidas que delimitam blocos de conteúdo */
-const CONTENT_SECTIONS = new Set([
-  "experience", "experiência", "experiencia",
-  "education", "educação", "formação", "formacao",
-  "summary", "sobre", "resumo",
-  "skills", "top skills", "competências", "habilidades",
-]);
-
-/** Seções que aparecem no PDF mas não delimitam conteúdo relevante */
-const NOISE_SECTIONS = new Set([
-  "contact", "certifications", "certificações", "languages", "idiomas",
-]);
-
-function isSectionHeading(line: string): boolean {
-  const l = line.toLowerCase();
-  return CONTENT_SECTIONS.has(l) || NOISE_SECTIONS.has(l);
-}
-
-function parseMonthYear(token: string): { month: string | null; year: string | null } {
-  token = token.trim();
-  if (/^\d{4}$/.test(token)) return { month: null, year: token };
-  const parts = token.split(/\s+/);
-  if (parts.length === 2) return { month: parts[0], year: parts[1] };
-  return { month: null, year: token };
-}
-
-function parseDateLine(line: string): {
-  startMonth: string | null;
-  startYear: string | null;
-  endMonth: string | null;
-  endYear: string | null;
-  ongoing: boolean;
-} | null {
-  const norm = normalize(line);
-  const m = DATE_LINE_RE.exec(norm);
-  if (!m) return null;
-  const from = parseMonthYear(m[1]);
-  const ongoing = /present|presente/i.test(m[2]);
-  const to = ongoing ? { month: null, year: null } : parseMonthYear(m[2]);
-  return {
-    startMonth: from.month,
-    startYear: from.year,
-    endMonth: to.month,
-    endYear: to.year,
-    ongoing,
-  };
-}
-
-function parseEduDateInLine(line: string): {
-  startMonth: string | null;
-  startYear: string | null;
-  endMonth: string | null;
-  endYear: string | null;
-  ongoing: boolean;
-} | null {
-  const norm = normalize(line);
-  const m = EDU_DATE_RE.exec(norm);
-  if (!m) return null;
-  const from = parseMonthYear(m[1]);
-  const to = parseMonthYear(m[2]);
-  return {
-    startMonth: from.month,
-    startYear: from.year,
-    endMonth: to.month,
-    endYear: to.year,
-    ongoing: false,
-  };
-}
-
-/** Extrai as linhas de uma seção do PDF até encontrar a próxima seção conhecida. */
-function extractSection(lines: string[], headings: string[]): string[] {
-  const idx = lines.findIndex((l) => headings.includes(normalize(l).toLowerCase()));
-  if (idx < 0) return [];
-  let end = lines.length;
-  for (let i = idx + 1; i < lines.length; i++) {
-    if (isSectionHeading(normalize(lines[i]).toLowerCase())) { end = i; break; }
+    return { startMonth, startYear, endMonth, endYear, ongoing: isOngoing };
   }
-  return lines.slice(idx + 1, end);
+
+  const parts = clean.split(/\s*[-–]\s*/);
+  if (parts.length >= 2) {
+    const parsePart = (p: string) => {
+      const tokens = p.trim().split(/\s+/);
+      return tokens.length === 1 ? { month: null, year: tokens[0] } : { month: tokens[0], year: tokens[1] };
+    };
+    const from = parsePart(parts[0]);
+    const isOngoing = /present|presente/i.test(parts[1]);
+    const to = isOngoing ? { month: null, year: null } : parsePart(parts[1]);
+    return {
+      startMonth: from.month,
+      startYear: from.year,
+      endMonth: to.month,
+      endYear: to.year,
+      ongoing: isOngoing,
+    };
+  }
+
+  return { startMonth: null, startYear: null, endMonth: null, endYear: null, ongoing: false };
 }
 
-// ─── Parser de Experience ────────────────────────────────────────────────────
+// ─── Extração de LayoutItems do PDF via pdf-parse ────────────────────────────
 
-/**
- * Padrão de bloco de experiência:
- *   [Company]
- *   [Title]          ← pode ser omitido se company == title
- *   [Date line]      ← obrigatório para detectar o bloco
- *   [Location]?      ← opcional, curta, sem dígitos no início
- *   [Description]    ← tudo o mais até o próximo bloco
- */
-function parseExperiences(lines: string[]): ExperienceEntry[] {
-  const results: ExperienceEntry[] = [];
-  let i = 0;
+export async function extractLayoutItems(buffer: Buffer): Promise<LayoutItem[]> {
+  const items: LayoutItem[] = [];
 
-  while (i < lines.length) {
-    const norm = normalize(lines[i]);
-    if (!norm || isSectionHeading(norm.toLowerCase())) { i++; continue; }
-
-    // Procura a linha de data nas próximas 3 linhas
-    let dateIdx = -1;
-    for (let d = i + 1; d <= Math.min(i + 3, lines.length - 1); d++) {
-      if (parseDateLine(lines[d])) { dateIdx = d; break; }
+  async function pagerender(pageData: Record<string, unknown>) {
+    const content = await (pageData["getTextContent"] as () => Promise<{
+      items: Array<{ str?: string; height?: number; transform?: number[]; fontName?: string }>;
+    }>)();
+    for (const raw of content.items) {
+      const text = normalizeText(raw.str ?? "");
+      if (!text) continue;
+      const h = (raw.height && raw.height > 0)
+        ? raw.height
+        : Math.abs(raw.transform?.[3] ?? 0);
+      items.push({
+        text,
+        h: Math.round(h * 10) / 10,
+        bold: /bold/i.test(raw.fontName ?? ""),
+      });
     }
-    if (dateIdx < 0) { i++; continue; }
+    return "";
+  }
 
-    // company = lines[i], title = lines entre i e dateIdx
-    const company = normalize(lines[i]);
-    const title = dateIdx > i + 1 ? normalize(lines[dateIdx - 1]) : company;
-    const dateInfo = parseDateLine(lines[dateIdx])!;
+  await pdfParse(buffer, { pagerender } as Record<string, unknown>);
+  return items;
+}
 
-    // Location: próxima linha após a data, se curta e sem dígito no início
+// ─── Divisão por Seções ──────────────────────────────────────────────────────
+
+function splitIntoSections(items: LayoutItem[]): {
+  personalInfo: LayoutItem[];
+  sections: Map<string, LayoutItem[]>;
+} {
+  const filtered = items.filter((it) => it.h > 9.5); // Descarta "Page N of M"
+  const sections = new Map<string, LayoutItem[]>();
+
+  let currentSection = "unassigned";
+  let currentItems: LayoutItem[] = [];
+
+  for (const it of filtered) {
+    const lo = it.text.toLowerCase();
+    const isMain = it.h >= 14.5 && SECTION_MAIN_NAMES.has(lo);
+    const isAux = it.h >= 12.4 && (SECTION_AUX_NAMES.has(lo) || SECTION_MAIN_NAMES.has(lo));
+
+    if (isMain || isAux) {
+      if (currentItems.length > 0) {
+        sections.set(currentSection, currentItems);
+      }
+      currentSection = lo;
+      currentItems = [];
+    } else {
+      currentItems.push(it);
+    }
+  }
+
+  if (currentItems.length > 0) {
+    sections.set(currentSection, currentItems);
+  }
+
+  const personalInfo: LayoutItem[] = [];
+  const nameItem = filtered.find((it) => it.h >= 20);
+
+  if (nameItem) {
+    const nameIdx = filtered.indexOf(nameItem);
+    for (let i = nameIdx; i < filtered.length; i++) {
+      const it = filtered[i];
+      if (it.h >= 14.5 && SECTION_MAIN_NAMES.has(it.text.toLowerCase())) break;
+      personalInfo.push(it);
+    }
+  }
+
+  return { personalInfo, sections };
+}
+
+// ─── Parsing de Experiências ─────────────────────────────────────────────────
+
+function parseExperiencesFromSection(items: LayoutItem[]): ExperienceEntry[] {
+  const results: ExperienceEntry[] = [];
+  if (items.length === 0) return results;
+
+  // Localizar índices com linhas de data
+  const dateIndices: number[] = [];
+  for (let idx = 0; idx < items.length; idx++) {
+    if (IS_DATE_RE.test(items[idx].text)) {
+      dateIndices.push(idx);
+    }
+  }
+
+  for (let k = 0; k < dateIndices.length; k++) {
+    const dateIdx = dateIndices[k];
+    const dateItem = items[dateIdx];
+    const nextDateIdx = k + 1 < dateIndices.length ? dateIndices[k + 1] : items.length;
+    const prevBoundary = k === 0 ? 0 : dateIndices[k - 1];
+
+    let company = "Experiência Profissional";
+    let title: string | null = null;
+
+    // Detectar Company e Title antes da data
+    const availableBefore: LayoutItem[] = [];
+    for (let b = dateIdx - 1; b >= prevBoundary; b--) {
+      availableBefore.unshift(items[b]);
+      if (availableBefore.length === 2) break;
+    }
+
+    if (availableBefore.length === 2) {
+      company = availableBefore[0].text;
+      title = availableBefore[1].text;
+    } else if (availableBefore.length === 1) {
+      company = availableBefore[0].text;
+    }
+
+    const dateParsed = parseDateString(dateItem.text);
+
+    let contentStart = dateIdx + 1;
+    if (contentStart < nextDateIdx && DURATION_ONLY_RE.test(items[contentStart].text)) {
+      contentStart++;
+    }
+
     let location: string | null = null;
-    let descStart = dateIdx + 1;
-    if (descStart < lines.length) {
-      const candidate = normalize(lines[descStart]);
-      // Location é curta (≤ 5 palavras), não começa com dígito, não é seção
-      const isLikelyLocation =
-        candidate.length > 0 &&
-        candidate.length < 60 &&
-        candidate.split(" ").length <= 6 &&
-        !/^\d/.test(candidate) &&
-        !parseDateLine(candidate) &&
-        !isSectionHeading(candidate.toLowerCase());
-      if (isLikelyLocation) {
-        location = candidate;
-        descStart++;
+    if (contentStart < nextDateIdx) {
+      const cand = items[contentStart].text;
+      if (cand.split(" ").length <= 5 && !/^\d/.test(cand) && !cand.startsWith("•") && !cand.includes(":")) {
+        location = cand;
+        contentStart++;
       }
     }
 
-    // Descrição: linhas até o próximo bloco de experiência (detectado por data line ±1)
+    let contentEnd = nextDateIdx;
+    if (k + 1 < dateIndices.length) {
+      if (nextDateIdx - 2 >= contentStart) {
+        contentEnd = nextDateIdx - 2;
+      } else if (nextDateIdx - 1 >= contentStart) {
+        contentEnd = nextDateIdx - 1;
+      }
+    }
+
     const descLines: string[] = [];
-    let j = descStart;
-    while (j < lines.length) {
-      if (isSectionHeading(normalize(lines[j]).toLowerCase())) break;
-      // Detecta início do próximo bloco: linha de data dentro das próximas 2
-      const nextDateIn1 = j + 1 < lines.length && parseDateLine(lines[j + 1]);
-      const nextDateIn2 = j + 2 < lines.length && parseDateLine(lines[j + 2]);
-      if (nextDateIn1 || nextDateIn2) break;
-      descLines.push(normalize(lines[j]));
-      j++;
+    for (let c = contentStart; c < contentEnd; c++) {
+      descLines.push(items[c].text);
     }
 
     results.push({
       company,
       title,
-      ...dateInfo,
+      ...dateParsed,
       location,
       description: descLines.join("\n").trim() || null,
     });
-
-    i = j > dateIdx ? j : dateIdx + 1;
   }
 
   return results;
 }
 
-// ─── Parser de Education ─────────────────────────────────────────────────────
+// ─── Parsing de Educação ─────────────────────────────────────────────────────
 
-/**
- * Padrão de bloco de educação:
- *   [School]
- *   [Degree, Field · (Month Year - Month Year)]  ← linha com data inline
- */
-function parseEducation(lines: string[]): EducationEntry[] {
+function parseEducationFromSection(items: LayoutItem[]): EducationEntry[] {
   const results: EducationEntry[] = [];
   let i = 0;
 
-  while (i < lines.length) {
-    const school = normalize(lines[i]);
-    if (!school || isSectionHeading(school.toLowerCase())) { i++; continue; }
-
+  while (i < items.length) {
+    const school = items[i].text;
     let degree: string | null = null;
     let field: string | null = null;
-    let dates = {
+    let dateParsed = {
       startMonth: null as string | null,
       startYear: null as string | null,
       endMonth: null as string | null,
@@ -254,97 +296,103 @@ function parseEducation(lines: string[]): EducationEntry[] {
       ongoing: false,
     };
 
-    if (i + 1 < lines.length) {
-      const next = normalize(lines[i + 1]);
-      const dateParsed = parseEduDateInLine(next);
-      if (dateParsed) {
-        dates = dateParsed;
-        // Extrai degree/field da parte antes de " · " ou " • "
-        const beforeDot = next.split(/\s*[·•]\s*/)[0].trim();
-        if (beforeDot) {
-          const segments = beforeDot.split(",").map((s) => s.trim());
-          degree = segments[0] || null;
-          field = segments.slice(1).join(", ") || null;
-        }
-        i += 2;
-      } else {
-        i++;
-      }
-    } else {
-      i++;
+    let j = i + 1;
+    // O próximo item pode ser o grau/curso (ex: "Ensino Médio" ou "Curso, Tecnologia da Informação")
+    if (j < items.length && !items[j].text.startsWith("·") && !IS_DATE_RE.test(items[j].text)) {
+      const parts = items[j].text.split(",").map((s) => s.trim()).filter(Boolean);
+      degree = parts[0] ?? null;
+      field = parts.slice(1).join(", ") || null;
+      j++;
     }
 
-    results.push({ school, degree, field, ...dates });
+    // O item seguinte pode conter a data (ex: "· (February 2019 - December 2021)")
+    if (j < items.length) {
+      const candidate = items[j].text;
+      if (IS_DATE_RE.test(candidate) || candidate.startsWith("·") || candidate.startsWith("(")) {
+        dateParsed = parseDateString(candidate);
+        j++;
+      }
+    }
+
+    results.push({
+      school,
+      degree,
+      field,
+      ...dateParsed,
+    });
+
+    i = j;
   }
 
   return results;
 }
 
-// ─── Parser de Skills ────────────────────────────────────────────────────────
+// ─── Parser Principal ────────────────────────────────────────────────────────
 
-function parseSkills(lines: string[]): string[] {
-  return lines
-    .join(",")
-    .split(/[,;|•\n]/)
-    .map((s) => normalize(s))
+export async function parseLinkedInPdf(buffer: Buffer): Promise<ParsedProfile> {
+  const items = await extractLayoutItems(buffer);
+  const { personalInfo, sections } = splitIntoSections(items);
+
+  // Nome completo
+  const nameItem = personalInfo.find((it) => it.h >= 20) ?? items.find((it) => it.h >= 20);
+  const fullName = nameItem ? nameItem.text : null;
+
+  // Headline / Título Profissional
+  const nameIdx = nameItem ? personalInfo.indexOf(nameItem) : -1;
+  let professionalTitle: string | null = null;
+  if (nameIdx >= 0 && nameIdx + 1 < personalInfo.length) {
+    const nextItem = personalInfo[nameIdx + 1];
+    professionalTitle = nextItem.text;
+    if (nameIdx + 2 < personalInfo.length && (personalInfo[nameIdx + 2].text.startsWith("&") || personalInfo[nameIdx + 2].text.startsWith("e "))) {
+      professionalTitle = `${professionalTitle} ${personalInfo[nameIdx + 2].text}`;
+    }
+  }
+
+  // Localização
+  let location: string | null = null;
+  if (nameIdx >= 0) {
+    for (let p = nameIdx + 1; p < personalInfo.length; p++) {
+      const cand = personalInfo[p].text;
+      if (cand !== professionalTitle && !cand.startsWith("&") && cand.split(" ").length <= 4 && !cand.includes("|")) {
+        location = cand;
+        break;
+      }
+    }
+  }
+
+  // Telefone no Contato / Header
+  const contactItems = sections.get("contact") ?? sections.get("contato") ?? [];
+  const phone =
+    [...contactItems, ...items].find((it) => PHONE_RE.test(it.text))?.text.replace(/\s*\(Mobile\)/i, "").trim() ?? null;
+
+  // Resumo / Summary
+  const summaryItems = sections.get("summary") ?? sections.get("sobre") ?? sections.get("resumo") ?? [];
+  const summary = summaryItems.map((it) => it.text).join(" ").trim() || null;
+
+  // Skills / Competências
+  const skillItems = sections.get("top skills") ?? sections.get("skills") ?? sections.get("competências") ?? sections.get("habilidades") ?? [];
+  const skills = skillItems
+    .flatMap((it) => it.text.split(/[,;|•]/))
+    .map((s) => s.trim())
     .filter((s) => s.length > 0 && s.length <= 80)
     .slice(0, 50);
-}
 
-// ─── Parser principal ────────────────────────────────────────────────────────
+  // Experiências
+  const expItems = sections.get("experience") ?? sections.get("experiência") ?? sections.get("experiencia") ?? [];
+  const experiences = parseExperiencesFromSection(expItems);
 
-export function parseLinkedInPdf(rawText: string): ParsedProfile {
-  // Normaliza non-breaking spaces antes de tudo
-  const lines = rawText
-    .split(/\r?\n/)
-    .map((l) => normalize(l.replace(/\u0000/g, "")))
-    .filter((l) => l.length > 0 && !PAGE_RE.test(l));
+  // Educação / Formação
+  const eduItems = sections.get("education") ?? sections.get("educação") ?? sections.get("formação") ?? sections.get("formacao") ?? [];
+  const education = parseEducationFromSection(eduItems);
 
-  // ── Cabeçalho (antes da primeira seção conhecida) ──
-  const firstSectionIdx = lines.findIndex((l) => isSectionHeading(l.toLowerCase()));
-  const header = firstSectionIdx > 0 ? lines.slice(0, firstSectionIdx) : lines.slice(0, 10);
-
-  // Nome: linha com ≥ 2 palavras, inicia com maiúscula, ≤ 60 chars
-  const fullName =
-    header.find((l) => /^[A-ZÀ-Ú][a-záàãâéêíóôõú]+ .+/.test(l) && l.length <= 60) ?? null;
-
-  // Título profissional: linha logo após o nome (headline do LinkedIn)
-  const nameIdx = fullName ? header.indexOf(fullName) : -1;
-  const rawTitle = nameIdx >= 0 && nameIdx + 1 < header.length ? header[nameIdx + 1] : null;
-  // Às vezes o título fica quebrado em 2 linhas — junta se a próxima começar com "&"
-  const nextAfterTitle = nameIdx >= 0 && nameIdx + 2 < header.length ? header[nameIdx + 2] : null;
-  const professionalTitle =
-    rawTitle && nextAfterTitle && nextAfterTitle.startsWith("&")
-      ? `${rawTitle} ${nextAfterTitle}`
-      : rawTitle;
-
-  // Localização: linha curta (≤ 5 palavras) sem dígitos e diferente do nome/título
-  const location =
-    header.find(
-      (l) =>
-        /^[A-ZÀ-Ú][a-záàãâéêíóôõú, .]+$/.test(l) &&
-        l.split(" ").length <= 5 &&
-        l !== fullName &&
-        l !== professionalTitle &&
-        l.toLowerCase() !== "contact",
-    ) ?? null;
-
-  // Telefone
-  const phone =
-    header.find((l) => PHONE_RE.test(l))?.replace(/\s*\(Mobile\)/i, "").trim() ?? null;
-
-  // ── Seções ──
-  const summaryLines = extractSection(lines, ["summary", "sobre", "resumo"]);
-  const summary = summaryLines.join(" ").trim() || null;
-
-  const skillLines = extractSection(lines, ["top skills", "skills", "competências", "habilidades"]);
-  const skills = parseSkills(skillLines);
-
-  const expLines = extractSection(lines, ["experience", "experiência", "experiencia"]);
-  const experiences = parseExperiences(expLines);
-
-  const eduLines = extractSection(lines, ["education", "formação", "educação", "formacao", "educacao"]);
-  const education = parseEducation(eduLines);
-
-  return { fullName, professionalTitle, location, phone, summary, skills, experiences, education };
+  return {
+    fullName,
+    professionalTitle,
+    location,
+    phone,
+    summary,
+    skills,
+    experiences,
+    education,
+  };
 }
