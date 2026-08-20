@@ -33,11 +33,11 @@ export default function App() {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/cadastro" element={<RegisterPage />} />
         <Route path="/vagas" element={<JobsSearchPage />} />
+        <Route path="/vagas/:id" element={<JobDetailsPage />} />
         <Route element={<CandidateAuthRoutes />}>
           <Route path="/onboarding/perfil" element={<ProfileOnboardingPage />} />
         </Route>
         <Route element={<RequireAuth requireProfile />}>
-          <Route path="/vagas/:id" element={<JobDetailsPage />} />
           <Route path="/minha-area" element={<FavoritesPage />} />
           <Route path="/minha-area/candidaturas" element={<ApplicationsPage />} />
           <Route path="/carreira" element={<CareerPage />} />
