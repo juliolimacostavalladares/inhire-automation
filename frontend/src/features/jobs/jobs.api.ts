@@ -106,3 +106,51 @@ export async function getApplicationForm(id: string) {
   const { data } = await http.get(`/jobs/${encodeURIComponent(id)}/application-form`)
   return data
 }
+
+export interface TailoredResume {
+  id: string
+  userId: string
+  jobId: string
+  targetRole: string
+  markdownContent: string
+  pdfBase64?: string | null
+  matchScore?: number | null
+  summary?: string | null
+  highlightedKeywords?: string[] | null
+  createdAt: string
+  updatedAt: string
+}
+
+export async function generateJobTailoredResume(
+  jobId: string,
+  options?: { forceRegenerate?: boolean; language?: 'pt-BR' | 'en' },
+) {
+  const { data } = await http.post<TailoredResume>(
+    `/jobs/${encodeURIComponent(jobId)}/resume/generate`,
+    options ?? {},
+  )
+  return data
+}
+
+export async function getJobTailoredResume(jobId: string) {
+  try {
+    const { data } = await http.get<TailoredResume>(
+      `/jobs/${encodeURIComponent(jobId)}/resume`,
+    )
+    return data
+  } catch {
+    return null
+  }
+}
+
+export async function downloadJobTailoredResumePdf(jobId: string) {
+  const response = await http.get(
+    `/jobs/${encodeURIComponent(jobId)}/resume/pdf`,
+    {
+      responseType: 'blob',
+    },
+  )
+  const blob = new Blob([response.data as BlobPart], { type: 'application/pdf' })
+  const url = window.URL.createObjectURL(blob)
+  return url
+}

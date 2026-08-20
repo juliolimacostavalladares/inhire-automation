@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
 import { useJobs } from '@/features/jobs/use-jobs'
+import { TailoredResumeCard } from '@/features/jobs/tailored-resume-card'
 import { cn } from '@/lib/utils'
 
 export function JobDetailsPage() {
@@ -120,7 +121,9 @@ export function JobDetailsPage() {
           </Card>
         </article>
 
-        <aside className="lg:sticky lg:top-6 lg:h-fit">
+        <aside className="space-y-6 lg:sticky lg:top-6 lg:h-fit">
+          <TailoredResumeCard jobId={job.id} jobTitle={job.title} />
+
           <Card className="p-5 sm:p-6">
             <p className="text-eyebrow">PRÓXIMO PASSO</p>
             <h2 className="mt-3 text-xl font-extrabold tracking-[-0.025em]">Gostou dessa oportunidade?</h2>

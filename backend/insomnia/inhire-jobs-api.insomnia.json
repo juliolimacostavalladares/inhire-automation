@@ -751,6 +751,85 @@
       "_type": "request"
     },
     {
+      "_id": "req_jobs_resume_generate",
+      "parentId": "fld_jobs",
+      "modified": 1787088600000,
+      "created": 1787088600000,
+      "url": "{{ _.baseUrl }}/jobs/{{ _.jobId }}/resume/generate",
+      "name": "Gerar Currículo Otimizado ATS com IA",
+      "description": "Gera um currículo sob medida para os requisitos da vaga em formato Markdown e PDF renderizado via Playwright.",
+      "method": "POST",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"forceRegenerate\": false,\n  \"language\": \"pt-BR\"\n}"
+      },
+      "parameters": [],
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" },
+        { "name": "Authorization", "value": "Bearer {{ _.jwtToken }}" }
+      ],
+      "authentication": {},
+      "metaSortKey": 10,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_jobs_resume_get",
+      "parentId": "fld_jobs",
+      "modified": 1787088600000,
+      "created": 1787088600000,
+      "url": "{{ _.baseUrl }}/jobs/{{ _.jobId }}/resume",
+      "name": "Consultar Currículo Otimizado da Vaga",
+      "description": "Retorna o currículo gerado previamente, score de compatibilidade ATS e palavras-chave alinhadas.",
+      "method": "GET",
+      "body": {},
+      "parameters": [],
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{ _.jwtToken }}" }
+      ],
+      "authentication": {},
+      "metaSortKey": 20,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_jobs_resume_pdf",
+      "parentId": "fld_jobs",
+      "modified": 1787088600000,
+      "created": 1787088600000,
+      "url": "{{ _.baseUrl }}/jobs/{{ _.jobId }}/resume/pdf",
+      "name": "Baixar PDF do Currículo Otimizado (ATS)",
+      "description": "Retorna o arquivo PDF gerado via Playwright para visualização inline ou download.",
+      "method": "GET",
+      "body": {},
+      "parameters": [],
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{ _.jwtToken }}" }
+      ],
+      "authentication": {},
+      "metaSortKey": 30,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
       "_id": "fld_runs",
       "parentId": "wrk_inhire_jobs_api",
       "modified": 1787079600000,
