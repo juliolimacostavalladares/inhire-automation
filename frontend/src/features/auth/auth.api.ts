@@ -11,11 +11,15 @@ export interface AuthUser {
 
 interface AuthResponse {
   user: AuthUser
+  token?: string
 }
 
 export async function login(input: LoginInput) {
   try {
     const { data } = await http.post<AuthResponse>('/auth/login', input)
+    if (data.token) {
+      localStorage.setItem('inhire_token', data.token)
+    }
     return data.user
   } catch (error) {
     if (axios.isAxiosError(error) && !error.response) {
@@ -30,6 +34,9 @@ export async function login(input: LoginInput) {
 
 export async function register(input: { name: string; email: string; password: string }) {
   const { data } = await http.post<AuthResponse>('/auth/register', input)
+  if (data.token) {
+    localStorage.setItem('inhire_token', data.token)
+  }
   return data.user
 }
 
@@ -39,5 +46,6 @@ export async function getCurrentUser() {
 }
 
 export async function logout() {
+  localStorage.removeItem('inhire_token')
   await http.post('/auth/logout')
 }

@@ -17,7 +17,7 @@ export class AuthController {
   async register(@Body() input: RegisterDto, @Res({ passthrough: true }) response: Response) {
     const session = await this.auth.register(input);
     this.setSessionCookie(response, session.accessToken);
-    return { user: session.user };
+    return { user: session.user, token: session.accessToken };
   }
 
   @Public()
@@ -26,7 +26,7 @@ export class AuthController {
   async login(@Body() input: LoginDto, @Res({ passthrough: true }) response: Response) {
     const session = await this.auth.login(input);
     this.setSessionCookie(response, session.accessToken);
-    return { user: session.user };
+    return { user: session.user, token: session.accessToken };
   }
 
   @Public()

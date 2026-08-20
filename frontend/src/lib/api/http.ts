@@ -7,6 +7,14 @@ export const http = axios.create({
   headers: { Accept: 'application/json' },
 })
 
+http.interceptors.request.use((config) => {
+  const token = typeof window !== 'undefined' ? localStorage.getItem('inhire_token') : null
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`
+  }
+  return config
+})
+
 export function getApiErrorMessage(error: unknown, fallback = 'Não foi possível carregar os dados.') {
   if (axios.isAxiosError(error)) {
     if (error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
