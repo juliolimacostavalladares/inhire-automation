@@ -63,8 +63,18 @@ export class ProfileController {
   }
 
   @Put()
-  @Patch()
   async update(
+    @CurrentAuth() auth: AuthContext,
+    @Body() body: UpdateProfileDto,
+  ) {
+    if (auth.type !== 'jwt') {
+      throw new UnauthorizedException('Authentication required');
+    }
+    return this.updateCandidateProfileUseCase.execute(auth.userId, body);
+  }
+
+  @Patch()
+  async patch(
     @CurrentAuth() auth: AuthContext,
     @Body() body: UpdateProfileDto,
   ) {

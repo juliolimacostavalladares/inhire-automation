@@ -1,4 +1,4 @@
-import { Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import {
   ICandidateProfileInputDTO,
   ICandidateProfileOutputDTO,
@@ -21,14 +21,9 @@ export class UpdateCandidateProfileUseCase {
     data: Partial<ICandidateProfileInputDTO>,
   ): Promise<ICandidateProfileOutputDTO> {
     const existing = await this.repository.findByUserId(userId);
-    if (!existing) {
-      throw new NotFoundException(
-        'Importe seu currículo antes de confirmar o perfil.',
-      );
-    }
 
     return this.repository.upsert(userId, {
-      ...existing,
+      ...(existing ?? {}),
       ...data,
       userId,
       status: CandidateProfileStatus.COMPLETE,
