@@ -6,7 +6,7 @@ import {
 } from '../../domain/dtos';
 import { TenantOrigin } from '../../domain/enums';
 
-export const TENANTS_REPOSITORY_TOKEN = Symbol('TENANTS_REPOSITORY_TOKEN');
+export const TENANTS_REPOSITORY_TOKEN = Symbol.for('TENANTS_REPOSITORY_TOKEN');
 
 export interface IQueryTenantsParams {
   page: number;

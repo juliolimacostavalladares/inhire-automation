@@ -5,7 +5,7 @@ import {
   IPaginatedResult,
 } from '../../domain/dtos';
 
-export const JOBS_REPOSITORY_TOKEN = Symbol('JOBS_REPOSITORY_TOKEN');
+export const JOBS_REPOSITORY_TOKEN = Symbol.for('JOBS_REPOSITORY_TOKEN');
 
 export interface IJobsRepository {
   createOrUpdate(data: ICreateJobInputDTO): Promise<IJobOutputDTO>;

@@ -1,4 +1,4 @@
-export const TOKEN_SERVICE_TOKEN = Symbol('TOKEN_SERVICE_TOKEN');
+export const TOKEN_SERVICE_TOKEN = Symbol.for('TOKEN_SERVICE_TOKEN');
 
 export interface ITokenPayload {
   sub: string;
