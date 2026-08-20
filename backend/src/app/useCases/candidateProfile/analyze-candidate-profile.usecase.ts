@@ -16,7 +16,7 @@ import {
   ICandidateProfileAnalysisDTO,
   IExperienceEntryDTO,
   IEducationEntryDTO,
-} from '../../../domain/dtos';
+} from '../../../domain/dtos/candidate-profile.dtos';
 
 @Injectable()
 export class AnalyzeCandidateProfileUseCase {
