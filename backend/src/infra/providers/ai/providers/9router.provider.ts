@@ -64,7 +64,7 @@ export class NineRouterAiProvider implements AiProvider {
           completion_tokens?: number;
           total_tokens?: number;
         };
-      }>(url, payload, { headers, timeout: 60000 }),
+      }>(url, payload, { headers, timeout: options.timeoutMs ?? 60_000 }),
     );
 
     const firstChoice = response.data?.choices?.[0];

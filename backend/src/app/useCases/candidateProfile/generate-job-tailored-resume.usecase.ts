@@ -38,6 +38,21 @@ export interface GenerateJobTailoredResumeCommand {
   language?: 'pt-BR' | 'en';
 }
 
+export interface ResumeProgressEvent {
+  step:
+    | 'loading_profile'
+    | 'building_prompt'
+    | 'generating_ai'
+    | 'rendering_pdf'
+    | 'saving'
+    | 'complete'
+    | 'cached';
+  message: string;
+  percent: number;
+}
+
+export type ResumeProgressFn = (event: ResumeProgressEvent) => void;
+
 @Injectable()
 export class GenerateJobTailoredResumeUseCase {
   private readonly logger = new Logger(GenerateJobTailoredResumeUseCase.name);
@@ -58,8 +73,13 @@ export class GenerateJobTailoredResumeUseCase {
 
   async execute(
     command: GenerateJobTailoredResumeCommand,
+    onProgress?: ResumeProgressFn,
   ): Promise<ITailoredResumeOutputDTO> {
     const { userId, jobId, forceRegenerate = false, language = 'pt-BR' } = command;
+
+    const emit = (event: ResumeProgressEvent) => onProgress?.(event);
+
+    emit({ step: 'loading_profile', message: 'Carregando perfil e dados da vaga…', percent: 10 });
 
     const user = await this.usersRepository.findById(userId);
     if (!user) {
@@ -85,6 +105,7 @@ export class GenerateJobTailoredResumeUseCase {
         jobId,
       );
       if (existing && existing.markdownContent && existing.pdfBase64) {
+        emit({ step: 'cached', message: 'Currículo já gerado, retornando versão salva.', percent: 100 });
         return existing;
       }
     }
@@ -160,19 +181,17 @@ O Markdown gerado deve seguir ESTRITAMENTE a seguinte estrutura de layout e tags
 *   **Nome do Curso/Grau** | Instituição (Ano Início – Ano Fim)
 `;
 
-    const prompt = `CANDIDATO:
-${JSON.stringify(candidateContext, null, 2)}
+    const prompt = `CANDIDATO:\n${JSON.stringify(candidateContext, null, 2)}\n\nVAGA ALVO:\n${JSON.stringify(jobContext, null, 2)}\n\nGere o currículo ATS e retorne estritamente o JSON com a estrutura solicitada.`;
 
-VAGA ALVO:
-${JSON.stringify(jobContext, null, 2)}
-
-Gere o currículo ATS e retorne estritamente o JSON com a estrutura solicitada.`;
+    emit({ step: 'building_prompt', message: 'Construindo prompt ATS personalizado…', percent: 25 });
 
     let aiResult: ITailoredResumeAiResponse;
+    emit({ step: 'generating_ai', message: 'A IA está gerando seu currículo otimizado… (isso pode levar alguns minutos)', percent: 35 });
     try {
       aiResult = await this.aiService.generateStructuredJson<ITailoredResumeAiResponse>({
         prompt,
         systemPrompt,
+        timeoutMs: 300_000,
       });
     } catch (error) {
       this.logger.error('Falha ao gerar currículo via IA:', error);
@@ -186,6 +205,7 @@ Gere o currículo ATS e retorne estritamente o JSON com a estrutura solicitada.`
     }
 
     // Renderizar PDF via Playwright
+    emit({ step: 'rendering_pdf', message: 'Renderizando PDF com formatação ATS via Playwright…', percent: 75 });
     let pdfBase64: string | null = null;
     try {
       const pdfBuffer = await this.pdfRenderer.renderMarkdownToPdf(
@@ -201,6 +221,7 @@ Gere o currículo ATS e retorne estritamente o JSON com a estrutura solicitada.`
     }
 
     // Persistir no banco de dados
+    emit({ step: 'saving', message: 'Salvando currículo gerado…', percent: 92 });
     const saved = await this.tailoredResumesRepository.upsert({
       userId,
       jobId,
@@ -214,6 +235,7 @@ Gere o currículo ATS e retorne estritamente o JSON com a estrutura solicitada.`
         : [],
     });
 
+    emit({ step: 'complete', message: 'Currículo gerado com sucesso!', percent: 100 });
     return saved;
   }
 }
