@@ -113,25 +113,27 @@ export function ProfileOnboardingPage() {
   const handleSave = async () => {
     setMessage(undefined)
     try {
-      await save({
-        linkedinProfileUrl,
-        phone: form.phone ?? undefined,
-        professionalTitle: form.professionalTitle ?? undefined,
-        professionalArea: form.professionalArea ?? undefined,
-        seniority: form.seniority ?? undefined,
-        location: form.location ?? undefined,
-        country: form.country ?? undefined,
-        salaryExpectation: form.salaryExpectation ?? undefined,
-        summary: form.summary ?? undefined,
-        alertsEnabled: form.alertsEnabled,
+      const updated = await save({
+        linkedinProfileUrl: linkedinProfileUrl.trim(),
+        phone: form.phone?.trim() || undefined,
+        professionalTitle: form.professionalTitle?.trim() || undefined,
+        professionalArea: form.professionalArea?.trim() || undefined,
+        seniority: form.seniority?.trim() || undefined,
+        location: form.location?.trim() || undefined,
+        country: form.country?.trim() || undefined,
+        salaryExpectation: form.salaryExpectation?.trim() || undefined,
+        summary: form.summary?.trim() || undefined,
+        alertsEnabled: form.alertsEnabled ?? true,
         skills: skills.split(',').map((item) => item.trim()).filter(Boolean),
         workModalities: form.workModalities ?? undefined,
         contractTypes: form.contractTypes ?? undefined,
-        experiences: experiences.filter((exp) => exp.company.trim() || exp.title.trim()),
-        education: education.filter((edu) => edu.school.trim()),
+        experiences: experiences.filter((exp) => exp.company?.trim() || exp.title?.trim()),
+        education: education.filter((edu) => edu.school?.trim()),
       })
-      navigate('/vagas', { replace: true })
-    } catch { /* store exposes the error */ }
+      if (updated && updated.status === 'COMPLETE') {
+        navigate('/vagas', { replace: true })
+      }
+    } catch { /* erro gerenciado pela store */ }
   }
 
   const hasExtractedProfile = Boolean(profile && (profile.status === 'NEEDS_REVIEW' || profile.status === 'COMPLETE'))
