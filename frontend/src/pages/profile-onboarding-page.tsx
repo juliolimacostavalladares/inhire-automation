@@ -317,13 +317,13 @@ export function ProfileOnboardingPage() {
                         </span>
                         <Button
                           variant="ghost"
-                          size="icon"
-                          className="text-destructive hover:bg-destructive/10 -mt-2 -mr-2"
+                          size="sm"
+                          className="h-8 gap-1.5 px-2.5 text-xs font-semibold text-destructive hover:bg-destructive/10 hover:text-destructive"
                           onClick={() => removeExperience(idx)}
                           type="button"
                           aria-label="Remover experiência"
                         >
-                          <Trash2 className="size-4" />
+                          <Trash2 className="size-3.5" /> Remover
                         </Button>
                       </div>
 
@@ -446,13 +446,13 @@ export function ProfileOnboardingPage() {
                         </span>
                         <Button
                           variant="ghost"
-                          size="icon"
-                          className="text-destructive hover:bg-destructive/10 -mt-2 -mr-2"
+                          size="sm"
+                          className="h-8 gap-1.5 px-2.5 text-xs font-semibold text-destructive hover:bg-destructive/10 hover:text-destructive"
                           onClick={() => removeEducation(idx)}
                           type="button"
                           aria-label="Remover formação"
                         >
-                          <Trash2 className="size-4" />
+                          <Trash2 className="size-3.5" /> Remover
                         </Button>
                       </div>
 
