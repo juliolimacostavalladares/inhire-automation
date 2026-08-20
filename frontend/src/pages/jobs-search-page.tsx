@@ -42,61 +42,43 @@ export function JobsSearchPage() {
 
   const filteredJobs = jobs
 
-  const firstName = user?.name ? user.name.split(' ')[0] : null
-  const greeting = firstName
-    ? `Olá, ${firstName}! Vamos encontrar sua vaga? 🔥`
-    : `Bem-vindo! Vamos encontrar sua vaga? 🔥`
-
   return (
     <div className="min-h-svh bg-canvas">
       <CandidateTopbar />
 
       <main className="mx-auto max-w-7xl px-5 py-8 sm:px-8 lg:px-10 lg:py-10">
-        {/* Hero Greeting Section */}
-        <div className="mb-8">
-          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold tracking-tight text-foreground flex items-center gap-2">
-            <span>{greeting}</span>
+        {/* Title Header matching InHire design prototype */}
+        <div className="mb-6">
+          <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-foreground">
+            Encontre sua próxima oportunidade
           </h1>
           <p className="mt-2 text-sm text-muted-foreground">
-            Explore oportunidades atualizadas em tempo real e gere currículos sob medida com IA.
+            Vagas verificadas e atualizadas diariamente.
           </p>
         </div>
 
-        {/* Search & Control Bar */}
-        <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          {/* Result Count Badge */}
-          <div className="inline-flex items-center gap-2.5 rounded-full bg-foreground px-5 py-2.5 text-xs font-bold text-background shadow-xs shrink-0 self-start sm:self-auto">
-            <span>Resultados da busca</span>
-            <span className="h-3.5 w-px bg-background/25" />
-            <span className="text-background/80 font-semibold">
-              {loading ? 'Buscando…' : total ? `${total} vagas encontradas` : '0 vagas'}
-            </span>
+        {/* Search & Filter Bar */}
+        <div className="mb-5 flex items-center gap-3">
+          <div className="relative flex-1">
+            <Input
+              className="h-12 rounded-xl border border-border bg-card pl-10 pr-4 text-sm shadow-xs focus-visible:ring-primary"
+              startIcon={<Search className="size-4 text-muted-foreground" />}
+              placeholder="Cargo, habilidade ou empresa"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              aria-label="Buscar vagas"
+            />
           </div>
-
-          {/* Search Input Bar */}
-          <div className="flex flex-1 items-center gap-3 max-w-xl sm:ml-auto">
-            <div className="relative flex-1">
-              <Input
-                className="h-11 rounded-2xl border-border/80 bg-card pl-10 pr-4 text-sm shadow-2xs focus-visible:ring-primary"
-                startIcon={<Search className="size-4 text-muted-foreground" />}
-                placeholder="Buscar por cargo, empresa, tecnologia ou localização…"
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                aria-label="Buscar vagas"
-              />
-            </div>
-            <Button
-              variant="outline"
-              size="icon"
-              className="size-11 shrink-0 rounded-2xl border-border/80 bg-card shadow-2xs hover:bg-muted/60"
-              aria-label="Filtrar vagas"
-            >
-              <SlidersHorizontal className="size-4" />
-            </Button>
-          </div>
+          <Button
+            className="h-12 rounded-xl bg-primary px-5 font-bold text-primary-foreground shadow-xs hover:bg-primary/90 shrink-0 flex items-center gap-2"
+            aria-label="Filtrar vagas"
+          >
+            <SlidersHorizontal className="size-4" />
+            <span className="hidden sm:inline">Filtros</span>
+          </Button>
         </div>
 
-        {/* Quick Filter Pills */}
+        {/* Quick Filter Chips */}
         <div className="mb-8 flex gap-2.5 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {filters.map((filter) => {
             const isActive = activeFilter === filter.id
@@ -104,13 +86,13 @@ export function JobsSearchPage() {
               <Button
                 key={filter.id}
                 type="button"
-                variant={isActive ? 'default' : 'outline'}
+                variant="outline"
                 size="sm"
                 className={cn(
-                  'h-9 rounded-full px-4 text-xs font-bold transition-all shadow-2xs',
+                  'h-8.5 rounded-full px-4 text-xs transition-all shadow-2xs',
                   isActive
-                    ? 'bg-foreground text-background hover:bg-foreground/90'
-                    : 'border-border/80 bg-card text-foreground hover:bg-muted/60',
+                    ? 'bg-primary text-primary-foreground font-extrabold border-primary hover:bg-primary/90'
+                    : 'border-border bg-card text-foreground font-semibold hover:border-foreground/30',
                   filter.id === 'recommended' && !user && 'hidden',
                 )}
                 aria-pressed={isActive}
@@ -122,18 +104,28 @@ export function JobsSearchPage() {
           })}
         </div>
 
+        {/* Section Header: Title + Counter */}
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="text-xl font-extrabold tracking-tight text-foreground">
+            Vagas para você
+          </h2>
+          <span className="text-xs font-semibold text-muted-foreground">
+            {loading ? 'Carregando…' : total ? `${total} oportunidades` : '0 oportunidades'}
+          </span>
+        </div>
+
         {/* Jobs Grid (2 Columns on Desktop) */}
         {loading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {[1, 2, 3, 4].map((i) => (
               <div
                 key={i}
-                className="h-56 animate-pulse rounded-3xl border border-border/60 bg-card/60 p-6"
+                className="h-44 animate-pulse rounded-2xl border border-border bg-card/60 p-5"
               />
             ))}
           </div>
         ) : error ? (
-          <div className="rounded-3xl border border-destructive/30 bg-card p-10 text-center shadow-xs" role="alert">
+          <div className="rounded-2xl border border-destructive/30 bg-card p-10 text-center shadow-xs" role="alert">
             <p className="text-base font-extrabold text-foreground">Não foi possível carregar as vagas</p>
             <p className="mt-2 text-sm text-muted-foreground">{error}</p>
             {error.includes('login') && (
@@ -146,7 +138,7 @@ export function JobsSearchPage() {
             </div>
           </div>
         ) : filteredJobs.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5 pb-12">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pb-12">
             {filteredJobs.map((job) => (
               <JobCard
                 key={job.id}
@@ -157,7 +149,7 @@ export function JobsSearchPage() {
             ))}
           </div>
         ) : (
-          <div className="rounded-3xl border border-dashed border-border bg-card/60 p-12 text-center">
+          <div className="rounded-2xl border border-dashed border-border bg-card/60 p-12 text-center">
             <Search className="mx-auto size-8 text-muted-foreground/60" />
             <p className="mt-4 text-base font-extrabold text-foreground">Nenhuma oportunidade encontrada</p>
             <p className="mt-2 text-sm text-muted-foreground">Tente alterar os termos da busca ou selecionar outro filtro.</p>
