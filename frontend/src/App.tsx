@@ -12,7 +12,6 @@ import {
   BackofficeTenantsPage,
 } from '@/pages/backoffice-pages'
 import { LoginPage } from '@/pages/login-page'
-import { CareerPage } from '@/pages/career-page'
 import { ApplicationsPage } from '@/pages/applications-page'
 import { RequireAuth } from '@/components/auth/require-auth'
 import { RegisterPage } from '@/pages/register-page'
@@ -40,7 +39,6 @@ export default function App() {
         <Route element={<RequireAuth requireProfile />}>
           <Route path="/minha-area" element={<FavoritesPage />} />
           <Route path="/minha-area/candidaturas" element={<ApplicationsPage />} />
-          <Route path="/carreira" element={<CareerPage />} />
         </Route>
         <Route path="/favoritos" element={<Navigate to="/minha-area" replace />} />
         <Route path="/backoffice/login" element={<BackofficeLoginPage />} />
