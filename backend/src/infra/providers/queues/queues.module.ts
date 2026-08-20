@@ -2,6 +2,7 @@ import { BullModule } from "@nestjs/bullmq";
 import { Global, Module } from "@nestjs/common";
 import { ConfigModule, ConfigService } from "@nestjs/config";
 import type { Environment } from "../../config/environment";
+import { RedisPubSubService } from "../redis/redis-pubsub.service";
 
 @Global()
 @Module({
@@ -20,6 +21,7 @@ import type { Environment } from "../../config/environment";
       }),
     }),
   ],
-  exports: [BullModule],
+  providers: [RedisPubSubService],
+  exports: [BullModule, RedisPubSubService],
 })
 export class QueuesModule {}

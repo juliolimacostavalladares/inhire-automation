@@ -82,9 +82,13 @@ export class AiService {
           error instanceof Error ? error.message : String(error)
         }. Response was: "${rawText.slice(0, 300)}"`,
       );
-      throw new InternalServerErrorException(
+
+      // Attach raw text to error so callers can implement their own fallback
+      const enrichedError = new InternalServerErrorException(
         'Falha ao interpretar resposta estruturada da inteligência artificial',
       );
+      (enrichedError as unknown as Record<string, unknown>).rawText = rawText;
+      throw enrichedError;
     }
   }
 
@@ -98,6 +102,8 @@ export class AiService {
 
   private extractJsonString(text: string): string {
     const trimmed = text.trim();
+
+    // Case 1: fenced code block (```json ... ```)
     if (trimmed.startsWith('```')) {
       const firstNewline = trimmed.indexOf('\n');
       const lastFence = trimmed.lastIndexOf('```');
@@ -106,6 +112,7 @@ export class AiService {
       }
     }
 
+    // Case 2: JSON object wrapped with braces
     const firstBrace = trimmed.indexOf('{');
     const firstBracket = trimmed.indexOf('[');
 

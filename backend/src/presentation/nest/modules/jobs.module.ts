@@ -1,3 +1,4 @@
+import { BullModule } from '@nestjs/bullmq';
 import { Module } from '@nestjs/common';
 import { JobsController } from '../../http/controllers/jobs.controller';
 import { ListJobsUseCase } from '../../../app/useCases/jobs/list-jobs.usecase';
@@ -16,9 +17,15 @@ import { PrismaCandidateProfilesRepository } from '../../../infra/repositories/p
 import { PrismaUsersRepository } from '../../../infra/repositories/prisma-users.repository';
 import { AiModule } from '../../../infra/providers/ai/ai.module';
 import { PdfModule } from '../../../infra/providers/pdf/pdf.module';
+import { RESUME_GENERATION_QUEUE } from '../../../infra/providers/queues/queue.constants';
+import { ResumeGenerationProcessor } from '../../../infra/services/resume/resume-generation.processor';
 
 @Module({
-  imports: [AiModule, PdfModule],
+  imports: [
+    AiModule,
+    PdfModule,
+    BullModule.registerQueue({ name: RESUME_GENERATION_QUEUE }),
+  ],
   controllers: [JobsController],
   providers: [
     { provide: JOBS_REPOSITORY_TOKEN, useClass: PrismaJobsRepository },
@@ -37,6 +44,7 @@ import { PdfModule } from '../../../infra/providers/pdf/pdf.module';
     GenerateJobTailoredResumeUseCase,
     GetJobTailoredResumeUseCase,
     DownloadJobTailoredResumePdfUseCase,
+    ResumeGenerationProcessor,
   ],
   exports: [
     JOBS_REPOSITORY_TOKEN,
@@ -47,6 +55,9 @@ import { PdfModule } from '../../../infra/providers/pdf/pdf.module';
     GenerateJobTailoredResumeUseCase,
     GetJobTailoredResumeUseCase,
     DownloadJobTailoredResumePdfUseCase,
+    ResumeGenerationProcessor,
+    BullModule,
   ],
 })
 export class JobsModule {}
+
