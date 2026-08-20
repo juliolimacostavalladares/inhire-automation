@@ -85,7 +85,9 @@ export function FavoritesPage() {
                     </div>
                   </div>
                   <Button asChild className="sm:shrink-0">
-                    <Link to={`/vagas/${job.id}`}>Ver vaga <Bookmark className="size-4" /></Link>
+                    <Link to={`/vagas/${job.id}`} target="_blank" rel="noopener noreferrer">
+                      Ver vaga <Bookmark className="size-4" />
+                    </Link>
                   </Button>
                 </Card>
               ))
