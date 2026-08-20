@@ -12,6 +12,8 @@ export interface AiChatOptions {
   maxTokens?: number;
   responseFormat?: { type: 'json_object' | 'text' };
   metadata?: Record<string, unknown>;
+  /** Timeout em milissegundos para a chamada HTTP ao provedor de IA. Padrão: 60000 */
+  timeoutMs?: number;
 }
 
 export interface AiChatResponse {
@@ -33,6 +35,8 @@ export interface AiStructuredJsonOptions<T = unknown> {
   temperature?: number;
   maxTokens?: number;
   validate?: (parsed: unknown) => T;
+  /** Timeout em milissegundos para a chamada HTTP ao provedor de IA. Padrão: 60000 */
+  timeoutMs?: number;
 }
 
 export type AiModelCategory = 'chat' | 'image' | 'tts' | 'embedding';

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import {
   Sparkles,
   Download,
@@ -12,15 +12,26 @@ import {
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
-import {
-  generateJobTailoredResume,
-  getJobTailoredResume,
-  downloadJobTailoredResumePdf,
-  type TailoredResume,
-} from './jobs.api'
+import { getJobTailoredResume, downloadJobTailoredResumePdf, type TailoredResume } from './jobs.api'
 import { useAuthStore } from '@/features/auth/auth.store'
 import { getApiErrorMessage } from '@/lib/api/http'
 import { Link } from 'react-router-dom'
+
+interface ResumeProgressEvent {
+  step: 'loading_profile' | 'building_prompt' | 'generating_ai' | 'rendering_pdf' | 'saving' | 'complete' | 'cached'
+  message: string
+  percent: number
+}
+
+const STEP_LABELS: Record<ResumeProgressEvent['step'], string> = {
+  loading_profile: 'Carregando perfil…',
+  building_prompt: 'Construindo prompt ATS…',
+  generating_ai: 'IA gerando currículo…',
+  rendering_pdf: 'Renderizando PDF…',
+  saving: 'Salvando currículo…',
+  complete: 'Concluído!',
+  cached: 'Carregando versão salva…',
+}
 
 interface TailoredResumeCardProps {
   jobId: string
@@ -31,44 +42,98 @@ export function TailoredResumeCard({ jobId, jobTitle }: TailoredResumeCardProps)
   const { user } = useAuthStore()
   const [resume, setResume] = useState<TailoredResume | null>(null)
   const [loading, setLoading] = useState(false)
+  const [progress, setProgress] = useState<ResumeProgressEvent | null>(null)
   const [downloading, setDownloading] = useState(false)
   const [copied, setCopied] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [showPreview, setShowPreview] = useState(false)
+  const esRef = useRef<EventSource | null>(null)
 
+  // Load existing resume on mount
   useEffect(() => {
     if (!user || !jobId) return
     let active = true
-
-    async function loadResume() {
-      try {
-        const data = await getJobTailoredResume(jobId)
-        if (active && data) {
-          setResume(data)
-        }
-      } catch {
-        // Sem currículo gerado ainda
-      }
-    }
-
-    void loadResume()
-    return () => {
-      active = false
-    }
+    void getJobTailoredResume(jobId).then((data) => {
+      if (active && data) setResume(data)
+    })
+    return () => { active = false }
   }, [jobId, user])
 
-  const handleGenerate = async (forceRegenerate = false) => {
-    if (!user) return
+  // Cleanup SSE on unmount
+  useEffect(() => {
+    return () => {
+      esRef.current?.close()
+      esRef.current = null
+    }
+  }, [])
+
+  const handleGenerate = (forceRegenerate = false) => {
+    if (!user || loading) return
+
+    const token = localStorage.getItem('inhire_token') ?? ''
+    const baseUrl = (import.meta.env.VITE_API_URL as string | undefined) ?? ''
+    const params = new URLSearchParams({
+      token,
+      forceRegenerate: String(forceRegenerate),
+      language: 'pt-BR',
+    })
+    const url = `${baseUrl}/jobs/${encodeURIComponent(jobId)}/resume/generate/stream?${params.toString()}`
+
     setLoading(true)
     setError(null)
+    setProgress(null)
 
-    try {
-      const data = await generateJobTailoredResume(jobId, { forceRegenerate })
-      setResume(data)
-    } catch (err) {
-      setError(getApiErrorMessage(err, 'Falha ao gerar o currículo personalizado.'))
-    } finally {
+    // Close any existing connection
+    esRef.current?.close()
+
+    const es = new EventSource(url)
+    esRef.current = es
+
+    es.addEventListener('progress', (e: MessageEvent<string>) => {
+      try {
+        const ev = JSON.parse(e.data) as ResumeProgressEvent
+        setProgress(ev)
+      } catch {
+        // ignore parse errors
+      }
+    })
+
+    es.addEventListener('complete', (e: MessageEvent<string>) => {
+      try {
+        const payload = JSON.parse(e.data) as { resume: TailoredResume }
+        setResume(payload.resume)
+      } catch {
+        // ignore
+      }
       setLoading(false)
+      setProgress(null)
+      es.close()
+      esRef.current = null
+    })
+
+    es.addEventListener('error', (e: MessageEvent<string>) => {
+      try {
+        const payload = JSON.parse(e.data) as { message: string }
+        setError(payload.message)
+      } catch {
+        setError('Falha ao gerar currículo. Verifique sua conexão e tente novamente.')
+      }
+      setLoading(false)
+      setProgress(null)
+      es.close()
+      esRef.current = null
+    })
+
+    // Handle EventSource network error (no data)
+    es.onerror = (_e) => {
+      // Only set error if not already handled by custom error event
+      if (loading) {
+        setError('Conexão com o servidor perdida. Tente novamente.')
+        setLoading(false)
+        setProgress(null)
+      }
+      es.close()
+      esRef.current = null
     }
   }
 
@@ -125,7 +190,7 @@ export function TailoredResumeCard({ jobId, jobTitle }: TailoredResumeCardProps)
           <Sparkles className="size-4" />
           <span>Currículo Sob Medida (ATS)</span>
         </div>
-        {resume?.matchScore && (
+        {resume?.matchScore && !loading && (
           <Badge variant="default" className="bg-primary text-primary-foreground font-bold">
             <Zap className="mr-1 size-3.5 fill-current" />
             {resume.matchScore}% Match ATS
@@ -140,31 +205,46 @@ export function TailoredResumeCard({ jobId, jobTitle }: TailoredResumeCardProps)
         </div>
       )}
 
-      {!resume ? (
+      {/* Progress bar while loading */}
+      {loading && progress && (
+        <div className="mt-3 space-y-2">
+          <div className="flex items-center justify-between text-xs">
+            <span className="text-muted-foreground">{STEP_LABELS[progress.step]}</span>
+            <span className="font-semibold text-primary">{progress.percent}%</span>
+          </div>
+          <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
+            <div
+              className="h-full rounded-full bg-primary transition-all duration-500 ease-out"
+              style={{ width: `${progress.percent}%` }}
+            />
+          </div>
+          <p className="text-[11px] text-muted-foreground">{progress.message}</p>
+        </div>
+      )}
+
+      {loading && !progress && (
+        <div className="mt-3 flex items-center gap-2 text-xs text-muted-foreground">
+          <RefreshCw className="size-3.5 animate-spin" />
+          <span>Iniciando geração…</span>
+        </div>
+      )}
+
+      {!resume && !loading ? (
         <div className="mt-4">
           <p className="text-xs leading-relaxed text-muted-foreground">
             A IA analisará seu histórico profissional real e alinhará suas competências e feitos aos requisitos desta vaga, gerando um currículo Markdown e PDF formatado para leitura automatizada (ATS).
           </p>
           <Button
-            onClick={() => void handleGenerate(false)}
+            onClick={() => handleGenerate(false)}
             disabled={loading}
             className="mt-4 w-full"
             size="sm"
           >
-            {loading ? (
-              <>
-                <RefreshCw className="mr-2 size-4 animate-spin" />
-                Criando Currículo Otimizado...
-              </>
-            ) : (
-              <>
-                <Sparkles className="mr-2 size-4" />
-                Gerar Currículo para Esta Vaga
-              </>
-            )}
+            <Sparkles className="mr-2 size-4" />
+            Gerar Currículo para Esta Vaga
           </Button>
         </div>
-      ) : (
+      ) : resume && !loading ? (
         <div className="mt-4 space-y-4">
           {resume.summary && (
             <p className="text-xs text-muted-foreground bg-muted/50 p-2.5 rounded-md border border-border/40">
@@ -231,7 +311,7 @@ export function TailoredResumeCard({ jobId, jobTitle }: TailoredResumeCardProps)
             </button>
             <button
               type="button"
-              onClick={() => void handleGenerate(true)}
+              onClick={() => handleGenerate(true)}
               disabled={loading}
               className="flex items-center gap-1 text-muted-foreground hover:text-foreground hover:underline"
             >
@@ -246,7 +326,7 @@ export function TailoredResumeCard({ jobId, jobTitle }: TailoredResumeCardProps)
             </div>
           )}
         </div>
-      )}
+      ) : null}
     </Card>
   )
 }

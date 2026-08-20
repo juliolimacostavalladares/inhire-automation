@@ -64,6 +64,7 @@ export class AiService {
       temperature: options.temperature ?? 0.1,
       maxTokens: options.maxTokens,
       responseFormat: { type: 'json_object' },
+      timeoutMs: options.timeoutMs,
     });
 
     const rawText = response.text.trim();
