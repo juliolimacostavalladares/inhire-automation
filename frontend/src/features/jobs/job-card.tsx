@@ -20,33 +20,39 @@ export function JobCard({ job, selected, favorite, onFavorite, onSelect }: JobCa
     }
   }
 
+  // Ensure Area doesn't repeat company name if data was parsed identically
+  const areaLabel = job.area && job.area.toLowerCase() !== job.company.toLowerCase() ? job.area : 'Tecnologia'
+
   return (
     <a
       href={`/vagas/${job.id}`}
       target="_blank"
       rel="noopener noreferrer"
-      className="group block text-inherit no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-2xl"
+      className="group block h-full text-inherit no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-2xl"
       onClick={handleClick}
     >
       <Card
         className={cn(
-          'relative flex flex-col justify-between overflow-hidden rounded-2xl border border-border bg-card p-5 transition-all duration-160 hover:border-primary hover:shadow-xs',
+          'relative flex h-full min-h-[195px] flex-col justify-between overflow-hidden rounded-2xl border border-border bg-card p-5 transition-all duration-160 hover:border-primary hover:shadow-xs',
           selected && 'border-primary bg-accent/20',
         )}
       >
-        <div>
+        <div className="flex flex-col flex-1">
           {/* Header: Company Avatar + Company Name + Job Title + Heart */}
           <div className="flex items-start justify-between gap-3">
-            <div className="flex items-center gap-3.5 min-w-0">
+            <div className="flex items-start gap-3.5 min-w-0 flex-1">
               <CompanyLogo
                 logoUrl={job.logoUrl}
                 company={job.company}
                 initials={job.initials}
-                className="size-11 shrink-0 rounded-xl border border-border bg-muted/20 text-xs font-extrabold text-foreground"
+                className="size-11 shrink-0 rounded-xl border border-border bg-muted/20 text-xs font-extrabold text-foreground mt-0.5"
               />
-              <div className="min-w-0">
+              <div className="min-w-0 flex-1">
                 <p className="truncate text-xs font-bold text-muted-foreground">{job.company}</p>
-                <h3 className="mt-0.5 text-base sm:text-lg font-extrabold leading-snug tracking-tight text-foreground group-hover:text-primary transition-colors">
+                <h3
+                  className="mt-0.5 line-clamp-2 min-h-[2.85rem] text-base sm:text-lg font-extrabold leading-snug tracking-tight text-foreground group-hover:text-primary transition-colors"
+                  title={job.title}
+                >
                   {job.title}
                 </h3>
               </div>
@@ -70,27 +76,27 @@ export function JobCard({ job, selected, favorite, onFavorite, onSelect }: JobCa
           </div>
 
           {/* Location & Metadata Line */}
-          <p className="mt-2.5 text-xs text-muted-foreground">
+          <p className="mt-2 text-xs text-muted-foreground truncate">
             {job.location} • {job.workplace} • {job.publishedLabel}
           </p>
+        </div>
 
-          {/* Badges Row */}
-          <div className="mt-3.5 flex flex-wrap items-center gap-2">
-            {/* Area: Primary Lime Badge from InHire Design System */}
-            <span className="inline-flex items-center rounded-lg bg-primary px-2.5 py-1 text-xs font-bold text-primary-foreground shadow-2xs">
-              {job.area}
-            </span>
-            {/* Other attributes: Neutral Border Badges */}
-            <span className="inline-flex items-center rounded-lg border border-border bg-card px-2.5 py-1 text-xs font-semibold text-muted-foreground">
-              {job.workplace}
-            </span>
-            <span className="inline-flex items-center rounded-lg border border-border bg-card px-2.5 py-1 text-xs font-semibold text-muted-foreground">
-              {job.seniority}
-            </span>
-            <span className="inline-flex items-center rounded-lg border border-border bg-card px-2.5 py-1 text-xs font-semibold text-muted-foreground">
-              {job.contract}
-            </span>
-          </div>
+        {/* Badges Row - Always pinned to the bottom */}
+        <div className="mt-4 flex flex-wrap items-center gap-2 pt-1">
+          {/* Area: Primary Lime Badge from InHire Design System */}
+          <span className="inline-flex items-center rounded-lg bg-primary px-2.5 py-1 text-xs font-bold text-primary-foreground shadow-2xs">
+            {areaLabel}
+          </span>
+          {/* Other attributes: Neutral Border Badges */}
+          <span className="inline-flex items-center rounded-lg border border-border bg-card px-2.5 py-1 text-xs font-semibold text-muted-foreground">
+            {job.workplace}
+          </span>
+          <span className="inline-flex items-center rounded-lg border border-border bg-card px-2.5 py-1 text-xs font-semibold text-muted-foreground">
+            {job.seniority}
+          </span>
+          <span className="inline-flex items-center rounded-lg border border-border bg-card px-2.5 py-1 text-xs font-semibold text-muted-foreground">
+            {job.contract}
+          </span>
         </div>
       </Card>
     </a>

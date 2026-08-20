@@ -138,7 +138,7 @@ export function JobsSearchPage() {
             </div>
           </div>
         ) : filteredJobs.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pb-12">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pb-12 items-stretch">
             {filteredJobs.map((job) => (
               <JobCard
                 key={job.id}
