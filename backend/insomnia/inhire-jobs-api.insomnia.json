@@ -1,7 +1,7 @@
 {
   "_type": "export",
   "__export_format": 4,
-  "__export_date": "2026-08-18T19:00:00.000Z",
+  "__export_date": "2026-08-20T19:35:00.000Z",
   "__export_source": "inhire-jobs-api",
   "resources": [
     {
@@ -9,8 +9,8 @@
       "parentId": null,
       "modified": 1787079600000,
       "created": 1787079600000,
-      "name": "InHire Jobs API",
-      "description": "Coleção para administrar tenants, consultar vagas e acompanhar coletas da InHire.",
+      "name": "InHire Jobs & AI API",
+      "description": "Coleção completa para autenticação, onboarding de candidatos com IA, vagas, empresas e crawler.",
       "scope": "collection",
       "_type": "workspace"
     },
@@ -23,12 +23,13 @@
       "data": {
         "baseUrl": "http://localhost:3000",
         "apiKey": "replace-with-your-api-key",
+        "jwtToken": "",
         "tenantId": "",
         "jobId": "",
         "runId": ""
       },
       "dataPropertyOrder": {
-        "&": ["baseUrl", "apiKey", "tenantId", "jobId", "runId"]
+        "&": ["baseUrl", "apiKey", "jwtToken", "tenantId", "jobId", "runId"]
       },
       "color": null,
       "isPrivate": false,
@@ -36,12 +37,270 @@
       "_type": "environment"
     },
     {
+      "_id": "fld_auth",
+      "parentId": "wrk_inhire_jobs_api",
+      "modified": 1787079600000,
+      "created": 1787079600000,
+      "name": "Autenticação",
+      "description": "Cadastro, login, perfil do usuário logado e logout.",
+      "environment": {},
+      "environmentPropertyOrder": null,
+      "metaSortKey": -500,
+      "_type": "request_group"
+    },
+    {
+      "_id": "req_auth_register",
+      "parentId": "fld_auth",
+      "modified": 1787079600000,
+      "created": 1787079600000,
+      "url": "{{ _.baseUrl }}/auth/register",
+      "name": "Cadastrar usuário / candidato",
+      "description": "Cria novo candidato e retorna o usuário com token JWT e cookie de sessão.",
+      "method": "POST",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"email\": \"candidato@exemplo.com\",\n  \"name\": \"Candidato Silva\",\n  \"password\": \"SenhaForte@123\"\n}"
+      },
+      "parameters": [],
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" },
+        { "name": "X-API-Key", "value": "{{ _.apiKey }}" }
+      ],
+      "authentication": {},
+      "metaSortKey": -400,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_auth_login",
+      "parentId": "fld_auth",
+      "modified": 1787079600000,
+      "created": 1787079600000,
+      "url": "{{ _.baseUrl }}/auth/login",
+      "name": "Login",
+      "description": "Autentica usuário existente. Define cookie de sessão e retorna token JWT.",
+      "method": "POST",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"email\": \"candidato@exemplo.com\",\n  \"password\": \"SenhaForte@123\"\n}"
+      },
+      "parameters": [],
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" },
+        { "name": "X-API-Key", "value": "{{ _.apiKey }}" }
+      ],
+      "authentication": {},
+      "metaSortKey": -300,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_auth_me",
+      "parentId": "fld_auth",
+      "modified": 1787079600000,
+      "created": 1787079600000,
+      "url": "{{ _.baseUrl }}/auth/me",
+      "name": "Obter usuário autenticado",
+      "description": "Retorna os dados do usuário autenticado pela sessão ou Bearer token.",
+      "method": "GET",
+      "body": {},
+      "parameters": [],
+      "headers": [
+        { "name": "X-API-Key", "value": "{{ _.apiKey }}" },
+        { "name": "Authorization", "value": "Bearer {{ _.jwtToken }}" }
+      ],
+      "authentication": {},
+      "metaSortKey": -200,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_auth_logout",
+      "parentId": "fld_auth",
+      "modified": 1787079600000,
+      "created": 1787079600000,
+      "url": "{{ _.baseUrl }}/auth/logout",
+      "name": "Logout",
+      "description": "Invalida a sessão do usuário.",
+      "method": "POST",
+      "body": {},
+      "parameters": [],
+      "headers": [
+        { "name": "X-API-Key", "value": "{{ _.apiKey }}" }
+      ],
+      "authentication": {},
+      "metaSortKey": -100,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "fld_profile",
+      "parentId": "wrk_inhire_jobs_api",
+      "modified": 1787079600000,
+      "created": 1787079600000,
+      "name": "Perfil do Candidato & IA",
+      "description": "Upload de currículo PDF com IA, consulta, atualização e análise de carreira.",
+      "environment": {},
+      "environmentPropertyOrder": null,
+      "metaSortKey": -450,
+      "_type": "request_group"
+    },
+    {
+      "_id": "req_profile_get",
+      "parentId": "fld_profile",
+      "modified": 1787079600000,
+      "created": 1787079600000,
+      "url": "{{ _.baseUrl }}/profile",
+      "name": "Consultar perfil do candidato",
+      "description": "Retorna o perfil completo do candidato logado.",
+      "method": "GET",
+      "body": {},
+      "parameters": [],
+      "headers": [
+        { "name": "X-API-Key", "value": "{{ _.apiKey }}" },
+        { "name": "Authorization", "value": "Bearer {{ _.jwtToken }}" }
+      ],
+      "authentication": {},
+      "metaSortKey": -400,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_profile_import_pdf",
+      "parentId": "fld_profile",
+      "modified": 1787079600000,
+      "created": 1787079600000,
+      "url": "{{ _.baseUrl }}/profile/import-pdf",
+      "name": "Importar currículo PDF (Extração IA)",
+      "description": "Envia o PDF do currículo/LinkedIn para extração inteligente e estruturação via modelo de IA.",
+      "method": "POST",
+      "body": {
+        "mimeType": "multipart/form-data",
+        "params": [
+          {
+            "name": "linkedinProfileUrl",
+            "value": "https://www.linkedin.com/in/seuperfil",
+            "type": "text",
+            "disabled": false
+          },
+          {
+            "name": "file",
+            "value": "",
+            "type": "file",
+            "description": "Selecione o arquivo PDF do currículo",
+            "disabled": false
+          }
+        ]
+      },
+      "parameters": [],
+      "headers": [
+        { "name": "X-API-Key", "value": "{{ _.apiKey }}" },
+        { "name": "Authorization", "value": "Bearer {{ _.jwtToken }}" }
+      ],
+      "authentication": {},
+      "metaSortKey": -300,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_profile_update",
+      "parentId": "fld_profile",
+      "modified": 1787079600000,
+      "created": 1787079600000,
+      "url": "{{ _.baseUrl }}/profile",
+      "name": "Atualizar / Confirmar perfil",
+      "description": "Salva as edições e confirma o perfil do candidato.",
+      "method": "PUT",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"professionalTitle\": \"Engenheiro de Software Sênior\",\n  \"professionalArea\": \"Engenharia de Software\",\n  \"seniority\": \"Sênior\",\n  \"phone\": \"+55 11 99999-9999\",\n  \"location\": \"São Paulo, SP\",\n  \"country\": \"Brasil\",\n  \"workModalities\": [\"REMOTE\", \"HYBRID\"],\n  \"contractTypes\": [\"CLT\", \"PJ\"],\n  \"salaryExpectation\": \"R$ 18.000,00\",\n  \"skills\": [\"TypeScript\", \"Node.js\", \"NestJS\", \"React\", \"PostgreSQL\", \"Docker\"],\n  \"summary\": \"Engenheiro com sólida experiência na construção de aplicações escaláveis.\",\n  \"experiences\": [\n    {\n      \"company\": \"Tech Solutions\",\n      \"title\": \"Tech Lead / Senior Developer\",\n      \"startMonth\": \"Jan\",\n      \"startYear\": \"2021\",\n      \"endMonth\": null,\n      \"endYear\": null,\n      \"ongoing\": true,\n      \"location\": \"Remoto\",\n      \"description\": \"Liderança técnica e desenvolvimento de microsserviços em NestJS e cloud.\"\n    }\n  ],\n  \"education\": [\n    {\n      \"school\": \"USP\",\n      \"degree\": \"Bacharelado\",\n      \"field\": \"Ciência da Computação\",\n      \"startYear\": \"2015\",\n      \"endYear\": \"2019\",\n      \"ongoing\": false\n    }\n  ],\n  \"alertsEnabled\": true\n}"
+      },
+      "parameters": [],
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" },
+        { "name": "X-API-Key", "value": "{{ _.apiKey }}" },
+        { "name": "Authorization", "value": "Bearer {{ _.jwtToken }}" }
+      ],
+      "authentication": {},
+      "metaSortKey": -200,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_profile_analyze",
+      "parentId": "fld_profile",
+      "modified": 1787079600000,
+      "created": 1787079600000,
+      "url": "{{ _.baseUrl }}/profile/analyze",
+      "name": "Análise Profissional com IA",
+      "description": "Gera análise aprofundada de carreira via IA com headline, resumo executivo, competências-chave, pontos fortes, recomendações e palavras-chave de matching.",
+      "method": "POST",
+      "body": {},
+      "parameters": [],
+      "headers": [
+        { "name": "X-API-Key", "value": "{{ _.apiKey }}" },
+        { "name": "Authorization", "value": "Bearer {{ _.jwtToken }}" }
+      ],
+      "authentication": {},
+      "metaSortKey": -100,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
       "_id": "fld_health",
       "parentId": "wrk_inhire_jobs_api",
       "modified": 1787079600000,
       "created": 1787079600000,
-      "name": "Health",
-      "description": "Verificação pública de PostgreSQL e Redis.",
+      "name": "Health & IA",
+      "description": "Verificação de status do PostgreSQL, Redis, Filas BullMQ e Provedor de IA.",
       "environment": {},
       "environmentPropertyOrder": null,
       "metaSortKey": -400,
@@ -53,12 +312,37 @@
       "modified": 1787079600000,
       "created": 1787079600000,
       "url": "{{ _.baseUrl }}/health",
-      "name": "Health check",
-      "description": "Não exige API key.",
+      "name": "Health check geral",
+      "description": "Verificação de PostgreSQL, Redis, Filas e IA. Não exige API key.",
       "method": "GET",
       "body": {},
       "parameters": [],
       "headers": [],
+      "authentication": {},
+      "metaSortKey": -200,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_health_ai",
+      "parentId": "fld_health",
+      "modified": 1787079600000,
+      "created": 1787079600000,
+      "url": "{{ _.baseUrl }}/health/ai",
+      "name": "Health check do Hub de IA (9Router)",
+      "description": "Verifica a conectividade com o 9Router/OpenAI provider e lista os modelos disponíveis.",
+      "method": "GET",
+      "body": {},
+      "parameters": [],
+      "headers": [
+        { "name": "X-API-Key", "value": "{{ _.apiKey }}" }
+      ],
       "authentication": {},
       "metaSortKey": -100,
       "isPrivate": false,
@@ -75,7 +359,7 @@
       "parentId": "wrk_inhire_jobs_api",
       "modified": 1787079600000,
       "created": 1787079600000,
-      "name": "Tenants",
+      "name": "Tenants (Empresas)",
       "description": "Cadastro e administração de empresas InHire.",
       "environment": {},
       "environmentPropertyOrder": null,
@@ -148,11 +432,11 @@
       "created": 1787079600000,
       "url": "{{ _.baseUrl }}/tenants",
       "name": "Cadastrar tenant pelo nome",
-      "description": "O backend gera e valida possíveis slugs.",
+      "description": "Gera o slug automaticamente a partir do nome e valida na API da InHire antes de salvar.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
-        "text": "{\n  \"name\": \"Nome da Empresa\"\n}"
+        "text": "{\n  \"name\": \"Nubank\"\n}"
       },
       "parameters": [],
       "headers": [
@@ -176,12 +460,12 @@
       "modified": 1787079600000,
       "created": 1787079600000,
       "url": "{{ _.baseUrl }}/tenants",
-      "name": "Cadastrar tenant pelo slug",
-      "description": "Informe o subdomínio sem .inhire.app.",
+      "name": "Cadastrar tenant com slug explícito",
+      "description": "Use quando o slug da InHire for diferente do nome da empresa.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
-        "text": "{\n  \"slug\": \"empresa-exemplo\"\n}"
+        "text": "{\n  \"name\": \"Mercado Livre\",\n  \"slug\": \"mercadolivre\"\n}"
       },
       "parameters": [],
       "headers": [
@@ -228,12 +512,12 @@
       "modified": 1787079600000,
       "created": 1787079600000,
       "url": "{{ _.baseUrl }}/tenants/{{ _.tenantId }}",
-      "name": "Atualizar tenant",
-      "description": "Atualiza nome e/ou estado ativo.",
+      "name": "Editar tenant",
+      "description": "Atualiza nome e/ou reativa o tenant.",
       "method": "PATCH",
       "body": {
         "mimeType": "application/json",
-        "text": "{\n  \"name\": \"Nome atualizado\",\n  \"active\": true\n}"
+        "text": "{\n  \"name\": \"Nome Atualizado\",\n  \"active\": true\n}"
       },
       "parameters": [],
       "headers": [
@@ -252,13 +536,13 @@
       "_type": "request"
     },
     {
-      "_id": "req_tenants_delete",
+      "_id": "req_tenants_deactivate",
       "parentId": "fld_tenants",
       "modified": 1787079600000,
       "created": 1787079600000,
       "url": "{{ _.baseUrl }}/tenants/{{ _.tenantId }}",
       "name": "Desativar tenant",
-      "description": "Desativação lógica: o histórico não é apagado.",
+      "description": "O tenant deixa de ser coletado automaticamente. O histórico não é apagado.",
       "method": "DELETE",
       "body": {},
       "parameters": [],
@@ -279,8 +563,8 @@
       "parentId": "wrk_inhire_jobs_api",
       "modified": 1787079600000,
       "created": 1787079600000,
-      "name": "Vagas",
-      "description": "Consulta paginada do histórico de vagas.",
+      "name": "Vagas (Jobs)",
+      "description": "Consulta paginada, filtros avançados e formulário de candidatura.",
       "environment": {},
       "environmentPropertyOrder": null,
       "metaSortKey": -200,
@@ -417,7 +701,7 @@
       "created": 1787088600000,
       "url": "{{ _.baseUrl }}/jobs/{{ _.jobId }}/application-form",
       "name": "Consultar campos da candidatura",
-      "description": "Retorna campos visíveis, obrigatórios e perguntas condicionais. Não envia candidatura.",
+      "description": "Retorna campos visíveis, obrigatórios e perguntas condicionais da vaga.",
       "method": "GET",
       "body": {},
       "parameters": [],
@@ -438,8 +722,8 @@
       "parentId": "wrk_inhire_jobs_api",
       "modified": 1787079600000,
       "created": 1787079600000,
-      "name": "Execuções",
-      "description": "Disparo e acompanhamento das filas BullMQ.",
+      "name": "Execuções (Crawler)",
+      "description": "Disparo e acompanhamento das filas BullMQ de coleta e descoberta.",
       "environment": {},
       "environmentPropertyOrder": null,
       "metaSortKey": -100,
