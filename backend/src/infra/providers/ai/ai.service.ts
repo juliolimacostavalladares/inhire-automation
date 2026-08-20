@@ -4,7 +4,7 @@ import {
   InternalServerErrorException,
   Logger,
 } from '@nestjs/common';
-import { AI_PROVIDER_TOKEN, AiProvider } from './ai-provider.interface';
+import { AI_PROVIDER_TOKEN, AiProvider } from '../../../app/providers/ai-provider.interface';
 import {
   AiChatOptions,
   AiChatResponse,

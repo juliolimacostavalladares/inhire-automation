@@ -5,7 +5,7 @@ import {
   AiModelInfo,
 } from '../../infra/providers/ai/ai.types';
 
-export const AI_PROVIDER_TOKEN = Symbol('AI_PROVIDER_TOKEN');
+export const AI_PROVIDER_TOKEN = Symbol.for('AI_PROVIDER_TOKEN');
 
 export interface AiProvider {
   readonly name: string;

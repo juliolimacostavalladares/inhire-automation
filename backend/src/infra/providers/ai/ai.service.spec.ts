@@ -1,5 +1,5 @@
 import { InternalServerErrorException } from '@nestjs/common';
-import { AiProvider } from './ai-provider.interface';
+import { AiProvider } from '../../../app/providers/ai-provider.interface';
 import { AiService } from './ai.service';
 import { AiChatOptions, AiChatResponse } from './ai.types';
 
