@@ -2,6 +2,29 @@ import { http } from '@/lib/api/http'
 
 export type ProfileStatus = 'PENDING_IMPORT' | 'PROCESSING' | 'NEEDS_REVIEW' | 'COMPLETE' | 'FAILED'
 
+export interface ExperienceEntry {
+  company: string
+  title: string
+  startMonth: string | null
+  startYear: string | null
+  endMonth: string | null
+  endYear: string | null
+  ongoing: boolean
+  location: string | null
+  description: string | null
+}
+
+export interface EducationEntry {
+  school: string
+  degree: string | null
+  field: string | null
+  startMonth: string | null
+  startYear: string | null
+  endMonth: string | null
+  endYear: string | null
+  ongoing: boolean
+}
+
 export interface CandidateProfile {
   id: string
   userId: string
@@ -19,8 +42,8 @@ export interface CandidateProfile {
   salaryExpectation?: string | null
   skills?: string[] | null
   summary?: string | null
-  experiences?: Array<Record<string, unknown>> | null
-  education?: Array<Record<string, unknown>> | null
+  experiences?: ExperienceEntry[] | null
+  education?: EducationEntry[] | null
   alertsEnabled: boolean
   sourceFileName?: string | null
   sourceImportedAt?: string | null

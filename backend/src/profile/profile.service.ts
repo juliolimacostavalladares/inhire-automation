@@ -7,6 +7,8 @@ import { CandidateProfileSource, CandidateProfileStatus, Prisma } from "@prisma/
 import pdfParse from "pdf-parse";
 import { PrismaService } from "../prisma/prisma.service";
 import type { UpdateProfileDto } from "./dto/profile.dto";
+import { parseLinkedInPdf } from "./profile-parser";
+import type { ExperienceEntry, EducationEntry } from "./profile-parser";
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 const ALLOWED_MIME = new Set(["application/pdf"]);
@@ -38,7 +40,18 @@ export class ProfileService {
     const text = parsed.text.replace(/\u0000/g, "").trim();
     if (text.length < 30) throw new BadRequestException("O PDF não contém texto suficiente para extrair o perfil.");
 
-    const extracted = this.extract(text);
+    const extracted = parseLinkedInPdf(text);
+
+    const jsonData = {
+      professionalTitle: extracted.professionalTitle,
+      phone: extracted.phone,
+      location: extracted.location,
+      summary: extracted.summary,
+      skills: extracted.skills as Prisma.InputJsonValue,
+      experiences: extracted.experiences as unknown as Prisma.InputJsonValue,
+      education: extracted.education as unknown as Prisma.InputJsonValue,
+    };
+
     const profile = await this.prisma.candidateProfile.upsert({
       where: { userId },
       create: {
@@ -51,7 +64,7 @@ export class ProfileService {
         sourceFileSize: file.size,
         extractedText: text,
         sourceImportedAt: new Date(),
-        ...this.toJsonData(extracted),
+        ...jsonData,
       },
       update: {
         status: CandidateProfileStatus.NEEDS_REVIEW,
@@ -63,7 +76,7 @@ export class ProfileService {
         extractedText: text,
         sourceImportedAt: new Date(),
         reviewedAt: null,
-        ...this.toJsonData(extracted),
+        ...jsonData,
       },
     });
     return this.publicProfile(profile);
@@ -96,45 +109,12 @@ export class ProfileService {
     } catch { return false; }
   }
 
-  private extract(text: string) {
-    const lines = text.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
-    const section = (names: string[]) => {
-      const index = lines.findIndex((line) => names.some((name) => line.toLowerCase() === name));
-      if (index < 0) return [];
-      return lines.slice(index + 1, index + 9).filter((line) => !this.isHeading(line));
-    };
-    const summaryLines = section(["sobre", "about", "resumo", "summary"]);
-    const experienceLines = section(["experiência", "experiencia", "experience", "experiences"]);
-    const educationLines = section(["formação", "formacao", "educação", "educacao", "education"]);
-    const skills = section(["competências", "competencias", "skills"])
-      .join(",").split(/[,;|•]/).map((item) => item.trim()).filter(Boolean).slice(0, 30);
-    const title = lines.find((line) => line.length >= 4 && line.length <= 120) ?? null;
-    return {
-      professionalTitle: title,
-      summary: summaryLines.join(" ").slice(0, 10000) || null,
-      skills,
-      experiences: experienceLines.map((value) => ({ raw: value })),
-      education: educationLines.map((value) => ({ raw: value })),
-    };
-  }
-
-  private isHeading(value: string) {
-    return value.length < 60 && /^[A-ZÁÀÃÂÉÊÍÓÔÕÚÇ0-9 &/-]+$/.test(value);
-  }
-
-  private toJsonData(extracted: ReturnType<ProfileService["extract"]>) {
-    return {
-      professionalTitle: extracted.professionalTitle,
-      summary: extracted.summary,
-      skills: extracted.skills as Prisma.InputJsonValue,
-      experiences: extracted.experiences as Prisma.InputJsonValue,
-      education: extracted.education as Prisma.InputJsonValue,
-    };
-  }
-
   private publicProfile(profile: Awaited<ReturnType<PrismaService["candidateProfile"]["findUnique"]>>) {
     if (!profile) return null;
     const { extractedText: _extractedText, ...safe } = profile;
     return safe;
   }
 }
+
+// Re-export types for use in other modules (e.g., frontend type generation)
+export type { ExperienceEntry, EducationEntry };
