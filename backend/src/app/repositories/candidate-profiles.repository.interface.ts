@@ -1,0 +1,8 @@
+import { ICandidateProfileInputDTO, ICandidateProfileOutputDTO } from '../../domain/dtos';
+
+export const CANDIDATE_PROFILES_REPOSITORY_TOKEN = Symbol('CANDIDATE_PROFILES_REPOSITORY_TOKEN');
+
+export interface ICandidateProfilesRepository {
+  upsert(userId: string, data: ICandidateProfileInputDTO): Promise<ICandidateProfileOutputDTO>;
+  findByUserId(userId: string): Promise<ICandidateProfileOutputDTO | null>;
+}

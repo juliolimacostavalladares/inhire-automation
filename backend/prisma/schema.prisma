@@ -1,0 +1,207 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum TenantOrigin {
+  MANUAL
+  WAYBACK
+  URLSCAN
+  COMMON_CRAWL
+}
+
+enum JobStatus {
+  PUBLISHED
+  CLOSED
+}
+
+enum RunType {
+  COLLECTION
+  DISCOVERY
+}
+
+enum RunTrigger {
+  SCHEDULED
+  MANUAL
+  DISCOVERY
+}
+
+enum RunStatus {
+  QUEUED
+  RUNNING
+  SUCCEEDED
+  PARTIAL
+  FAILED
+}
+
+enum RunItemStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
+}
+
+enum UserRole {
+  CANDIDATE
+  ADMIN
+}
+
+enum CandidateProfileStatus {
+  PENDING_IMPORT
+  PROCESSING
+  NEEDS_REVIEW
+  COMPLETE
+  FAILED
+}
+
+enum CandidateProfileSource {
+  LINKEDIN_PDF_UPLOAD
+  RESUME_UPLOAD
+  MANUAL
+}
+
+model User {
+  id           String   @id @default(uuid()) @db.Uuid
+  email        String   @unique @db.VarChar(254)
+  name         String   @db.VarChar(120)
+  passwordHash String   @db.VarChar(255)
+  role         UserRole @default(CANDIDATE)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  candidateProfile CandidateProfile?
+
+  @@index([role])
+}
+
+model CandidateProfile {
+  id                    String                 @id @default(uuid()) @db.Uuid
+  userId                String                 @unique @db.Uuid
+  status                CandidateProfileStatus @default(PENDING_IMPORT)
+  source                CandidateProfileSource?
+  linkedinProfileUrl    String?                @db.VarChar(500)
+  phone                 String?                @db.VarChar(40)
+  professionalTitle     String?                @db.VarChar(180)
+  professionalArea      String?                @db.VarChar(180)
+  seniority             String?                @db.VarChar(80)
+  location              String?                @db.VarChar(180)
+  country               String?                @db.VarChar(100)
+  workModalities        Json?
+  contractTypes         Json?
+  salaryExpectation     String?                @db.VarChar(100)
+  skills                Json?
+  summary               String?                @db.Text
+  experiences           Json?
+  education             Json?
+  alertsEnabled         Boolean                @default(true)
+  sourceFileName        String?                @db.VarChar(255)
+  sourceFileMime        String?                @db.VarChar(100)
+  sourceFileSize        Int?
+  extractedText         String?                @db.Text
+  sourceImportedAt      DateTime?
+  reviewedAt            DateTime?
+  createdAt             DateTime               @default(now())
+  updatedAt             DateTime               @updatedAt
+  user                  User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([status])
+}
+
+model Tenant {
+  id              String              @id @default(uuid()) @db.Uuid
+  slug            String              @unique @db.VarChar(100)
+  name            String              @db.VarChar(255)
+  logoUrl         String?             @db.Text
+  origin          TenantOrigin
+  active          Boolean             @default(true)
+  lastValidatedAt DateTime?
+  lastCollectedAt DateTime?
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+  jobs            Job[]
+  runItems        CrawlRunItem[]
+  evidence        DiscoveryEvidence[]
+
+  @@index([active])
+  @@index([name])
+}
+
+model Job {
+  id              String    @id @default(uuid()) @db.Uuid
+  externalId      String    @db.VarChar(100)
+  tenantId        String    @db.Uuid
+  title           String    @db.VarChar(500)
+  workplaceType   String?   @db.VarChar(100)
+  location        String?   @db.VarChar(500)
+  sourceStatus    String?   @db.VarChar(100)
+  descriptionHtml String?   @db.Text
+  applicationForm Json?
+  publishedAt     DateTime?
+  lastPublishedAt DateTime?
+  detailFetchedAt DateTime?
+  url             String    @db.Text
+  status          JobStatus @default(PUBLISHED)
+  firstSeenAt     DateTime  @default(now())
+  lastSeenAt      DateTime  @default(now())
+  closedAt        DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  tenant          Tenant    @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+
+  @@unique([tenantId, externalId])
+  @@index([status, lastSeenAt])
+  @@index([tenantId, status])
+  @@index([publishedAt])
+  @@index([title])
+}
+
+model CrawlRun {
+  id             String         @id @default(uuid()) @db.Uuid
+  type           RunType
+  trigger        RunTrigger
+  status         RunStatus      @default(QUEUED)
+  totalItems     Int            @default(0)
+  processedItems Int            @default(0)
+  successItems   Int            @default(0)
+  failedItems    Int            @default(0)
+  discovered     Int            @default(0)
+  jobsCreated    Int            @default(0)
+  jobsUpdated    Int            @default(0)
+  jobsClosed     Int            @default(0)
+  error          String?        @db.Text
+  startedAt      DateTime?
+  finishedAt     DateTime?
+  createdAt      DateTime       @default(now())
+  items          CrawlRunItem[]
+
+  @@index([type, createdAt])
+  @@index([status])
+}
+
+model CrawlRunItem {
+  id        String        @id @default(uuid()) @db.Uuid
+  runId     String        @db.Uuid
+  tenantId  String?       @db.Uuid
+  subject   String        @db.VarChar(500)
+  status    RunItemStatus @default(PENDING)
+  error     String?       @db.Text
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+  run       CrawlRun      @relation(fields: [runId], references: [id], onDelete: Cascade)
+  tenant    Tenant?       @relation(fields: [tenantId], references: [id], onDelete: SetNull)
+
+  @@index([runId, status])
+}
+
+model DiscoveryEvidence {
+  id           String       @id @default(uuid()) @db.Uuid
+  tenantId     String       @db.Uuid
+  source       TenantOrigin
+  evidenceUrl  String       @db.Text
+  discoveredAt DateTime     @default(now())
+  tenant       Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, source, evidenceUrl])
+}
