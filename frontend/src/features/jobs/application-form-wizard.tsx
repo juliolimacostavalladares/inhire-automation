@@ -18,6 +18,9 @@ import {
   Bookmark,
   Share2,
   Check,
+  Calendar,
+  Hash,
+  Upload,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -49,7 +52,7 @@ interface ApplicationFormProps {
   onToggleFavorite?: () => void
 }
 
-const FIELD_ICONS: Record<string, ReactNode> = {
+const KNOWN_FIELD_ICONS: Record<string, ReactNode> = {
   name: <User className="size-4 text-muted-foreground" />,
   email: <Mail className="size-4 text-muted-foreground" />,
   phone: <Phone className="size-4 text-muted-foreground" />,
@@ -57,7 +60,56 @@ const FIELD_ICONS: Record<string, ReactNode> = {
   city: <MapPin className="size-4 text-muted-foreground" />,
   cep: <MapPin className="size-4 text-muted-foreground" />,
   linkedinUsername: <Globe className="size-4 text-muted-foreground" />,
+  portfolioUrl: <Globe className="size-4 text-muted-foreground" />,
+  website: <Globe className="size-4 text-muted-foreground" />,
+  github: <Globe className="size-4 text-muted-foreground" />,
   salaryExpectation: <DollarSign className="size-4 text-muted-foreground" />,
+  birthDate: <Calendar className="size-4 text-muted-foreground" />,
+  cpf: <Hash className="size-4 text-muted-foreground" />,
+  rg: <Hash className="size-4 text-muted-foreground" />,
+}
+
+const KNOWN_FIELD_LABELS: Record<string, string> = {
+  name: 'Nome completo',
+  email: 'Seu melhor email',
+  phone: 'Celular com DDD',
+  linkedinUsername: 'Linkedin',
+  linkedin: 'Linkedin',
+  location: 'Cidade',
+  city: 'Cidade',
+  country: 'País de origem',
+  cep: 'CEP',
+  portfolioUrl: 'Portfólio / GitHub',
+  portfolio: 'Portfólio / GitHub',
+  website: 'Website Pessoal',
+  github: 'Perfil do GitHub',
+  cpf: 'CPF',
+  rg: 'RG',
+  birthDate: 'Data de Nascimento',
+  dataNascimento: 'Data de Nascimento',
+  gender: 'Gênero',
+  genero: 'Gênero',
+  disability: 'Pessoa com Deficiência (PCD)',
+  pcd: 'Pessoa com Deficiência (PCD)',
+}
+
+const KNOWN_FIELD_PLACEHOLDERS: Record<string, string> = {
+  name: 'Seu nome completo',
+  email: 'Seu melhor email',
+  phone: '(00) 00000-0000',
+  linkedinUsername: 'https://linkedin.com/in/seu-perfil',
+  linkedin: 'https://linkedin.com/in/seu-perfil',
+  location: 'Informe sua cidade',
+  city: 'Informe sua cidade',
+  country: 'Selecione o país',
+  cep: '00000-000',
+  portfolioUrl: 'https://github.com/seuperfil',
+  portfolio: 'https://github.com/seuperfil',
+  website: 'https://seusite.com',
+  github: 'https://github.com/seuperfil',
+  cpf: '000.000.000-00',
+  rg: '00.000.000-0',
+  salaryExpectation: 'R$ 0.000,00',
 }
 
 export function ApplicationFormWizard({
@@ -79,7 +131,7 @@ export function ApplicationFormWizard({
   )
   const [tailoredResume, setTailoredResume] = useState<TailoredResume | null>(null)
 
-  // Form field values
+  // Form field values (handles text, single values, and comma-separated arrays for multiple-choice)
   const [values, setValues] = useState<Record<string, string>>({
     country: 'Brasil',
     workModel: 'Sim',
@@ -153,7 +205,7 @@ export function ApplicationFormWizard({
     })
   }, [user, profile])
 
-  // Detect contract type from contractType field options
+  // Contract Type Options
   const contractTypeOptions = useMemo(() => {
     const field = formStructure?.fields.find((f) => f.key === 'contractType')
     return field?.options ?? []
@@ -221,7 +273,7 @@ export function ApplicationFormWizard({
       })
     }
 
-    // 5. Location (Country + City)
+    // 5. Location (País + Cidade)
     if (rawKeys.has('location') || rawKeys.has('city') || rawKeys.has('country')) {
       const field = rawFields.find((f) => f.key === 'location' || f.key === 'city')
       result.push({
@@ -309,7 +361,7 @@ export function ApplicationFormWizard({
       })
     }
 
-    // 10. Additional custom tenant fields
+    // 10. All other possible dynamic fields (portfolio, github, website, cpf, rg, birthDate, gender, etc.)
     for (const f of rawFields) {
       if (
         [
@@ -334,10 +386,14 @@ export function ApplicationFormWizard({
       ) {
         continue
       }
+
+      const label = KNOWN_FIELD_LABELS[f.key] || f.label || humanizeKey(f.key)
+      const placeholder = KNOWN_FIELD_PLACEHOLDERS[f.key] || f.placeholder || `Informe ${label.toLowerCase()}`
+
       result.push({
         key: f.key,
-        label: f.label || f.key,
-        placeholder: f.placeholder || `Informe ${f.label || f.key}`,
+        label,
+        placeholder,
         type: f.type || 'text',
         required: f.required ?? false,
         options: f.options ?? [],
@@ -347,7 +403,7 @@ export function ApplicationFormWizard({
     return result
   }, [formStructure, workplace, jobLocation, singleContractType, contractTypeOptions])
 
-  // Diversity questions
+  // Diversity & custom vacancy questions from backend
   const visibleQuestions = useMemo(() => {
     const questions = formStructure?.diversityQuestions ?? []
     return questions.filter((q) => {
@@ -356,10 +412,15 @@ export function ApplicationFormWizard({
       if (!parentAnswer) return false
       const parentQ = questions.find((item) => item.id === q.dependsOnQuestionId)
       if (!parentQ) return true
-      const matchingOption = parentQ.options.find(
-        (opt) => (opt.title || opt.id) === parentAnswer,
-      )
-      return matchingOption ? matchingOption.revealsQuestionIds.includes(q.id) : false
+      
+      const parentSelectedList = parentAnswer.split(',').map((s) => s.trim())
+      return parentQ.options.some((opt) => {
+        const titleOrId = opt.title || opt.id
+        return (
+          parentSelectedList.includes(titleOrId) &&
+          opt.revealsQuestionIds?.includes(q.id)
+        )
+      })
     })
   }, [formStructure, values])
 
@@ -370,6 +431,28 @@ export function ApplicationFormWizard({
       setErrors((prev) => {
         const next = { ...prev }
         delete next[key]
+        return next
+      })
+    }
+  }
+
+  // Multi-choice toggle handler for checkboxes
+  const handleToggleMultiChoice = (questionId: string, optionTitle: string) => {
+    setValues((prev) => {
+      const current = prev[questionId] ? prev[questionId].split(',').filter(Boolean) : []
+      const index = current.indexOf(optionTitle)
+      let nextList: string[]
+      if (index >= 0) {
+        nextList = current.filter((item) => item !== optionTitle)
+      } else {
+        nextList = [...current, optionTitle]
+      }
+      return { ...prev, [questionId]: nextList.join(',') }
+    })
+    if (errors[questionId]) {
+      setErrors((prev) => {
+        const next = { ...prev }
+        delete next[questionId]
         return next
       })
     }
@@ -438,6 +521,8 @@ export function ApplicationFormWizard({
           ...questionAnswers,
           ...(values.country ? { country: values.country } : {}),
           ...(values.hasReferral === 'Sim' ? { referral: values.referralEmail } : {}),
+          ...(values.cep ? { cep: values.cep } : {}),
+          ...(values.portfolioUrl ? { portfolioUrl: values.portfolioUrl } : {}),
         },
         privacyPolicyAccepted,
       }
@@ -464,11 +549,11 @@ export function ApplicationFormWizard({
     const val = values[field.key] || ''
     const label = field.label || field.key
     const placeholder = field.placeholder || `Informe ${label.toLowerCase()}`
-    const icon = FIELD_ICONS[field.key]
+    const icon = KNOWN_FIELD_ICONS[field.key]
     const hasError = Boolean(errors[field.key])
 
     // 1. Work Model Question (Sim / Não)
-    if (field.key === 'workModel' || field.type === 'boolean') {
+    if (field.key === 'workModel' || (field.type === 'boolean' && field.key.toLowerCase().includes('model'))) {
       const currentChoice = values.workModel || 'Sim'
       return (
         <div key={field.key} className="space-y-1.5">
@@ -543,7 +628,7 @@ export function ApplicationFormWizard({
       )
     }
 
-    // 3. Select fields (País de origem, Tipo de contrato, etc.)
+    // 3. Select fields (País de origem, Tipo de contrato, Gênero, etc.)
     if (field.type === 'select' && field.options.length > 0) {
       return (
         <div key={field.key} className="space-y-1">
@@ -597,7 +682,28 @@ export function ApplicationFormWizard({
       )
     }
 
-    // 5. Standard Text / Email / URL / Currency Inputs
+    // 5. Date inputs
+    if (field.type === 'date') {
+      return (
+        <div key={field.key} className="space-y-1">
+          <Label htmlFor={`app-field-${field.key}`} className="text-xs font-bold text-foreground">
+            {label} {field.required && <span className="text-destructive">*</span>}
+          </Label>
+          <Input
+            id={`app-field-${field.key}`}
+            type="date"
+            value={val}
+            onChange={(e) => handleFieldChange(field.key, e.target.value)}
+            startIcon={icon || <Calendar className="size-4 text-muted-foreground" />}
+            invalid={hasError}
+            className="h-11 text-xs rounded-xl bg-background border-input focus-within:border-primary"
+          />
+          {hasError && <p className="text-[11px] text-destructive font-semibold">{errors[field.key]}</p>}
+        </div>
+      )
+    }
+
+    // 6. Standard Text / Email / URL / Currency / Number Inputs
     return (
       <div key={field.key} className="space-y-1">
         <Label htmlFor={`app-field-${field.key}`} className="text-xs font-bold text-foreground">
@@ -611,7 +717,7 @@ export function ApplicationFormWizard({
         <div className="relative">
           <Input
             id={`app-field-${field.key}`}
-            type={field.type === 'email' ? 'email' : 'text'}
+            type={field.type === 'email' ? 'email' : field.type === 'number' ? 'number' : 'text'}
             value={val}
             onChange={(e) => handleFieldChange(field.key, e.target.value)}
             placeholder={placeholder}
@@ -625,23 +731,64 @@ export function ApplicationFormWizard({
     )
   }
 
-  // Render a dynamic question
+  // Render a dynamic question supporting singleChoice, multipleChoice, shortText, longText, fileUpload, and date
   const renderDynamicQuestion = (q: DiversityQuestion) => {
     const val = values[q.id] || ''
     const hasError = Boolean(errors[q.id])
 
-    return (
-      <div key={q.id} className="space-y-1">
-        <Label className="text-xs font-bold text-foreground leading-snug">
-          {q.question || q.title} {q.required && <span className="text-destructive">*</span>}
-        </Label>
-        {q.subTitle && <p className="text-[11px] text-muted-foreground leading-normal">{q.subTitle}</p>}
+    // A. Multiple Choice (Checkboxes)
+    if (q.answerType === 'multipleChoice' && q.options && q.options.length > 0) {
+      const selectedOptions = val.split(',').filter(Boolean)
+      return (
+        <div key={q.id} className="space-y-2">
+          <Label className="text-xs font-bold text-foreground leading-snug">
+            {q.question || q.title} {q.required && <span className="text-destructive">*</span>}
+          </Label>
+          {q.subTitle && <p className="text-[11px] text-muted-foreground leading-normal">{q.subTitle}</p>}
 
-        {q.options && q.options.length > 0 ? (
+          <div className="space-y-1.5 pt-0.5">
+            {q.options.map((opt) => {
+              const optTitle = opt.title || opt.id
+              const isChecked = selectedOptions.includes(optTitle)
+              return (
+                <label
+                  key={opt.id}
+                  className={cn(
+                    'flex items-center gap-2.5 rounded-xl border p-2.5 text-xs transition-colors cursor-pointer',
+                    isChecked
+                      ? 'border-primary bg-primary/10 font-bold text-foreground'
+                      : 'border-border bg-background text-foreground hover:bg-accent/40',
+                  )}
+                >
+                  <input
+                    type="checkbox"
+                    checked={isChecked}
+                    onChange={() => handleToggleMultiChoice(q.id, optTitle)}
+                    className="size-4 rounded accent-primary text-primary focus:ring-primary"
+                  />
+                  <span className="flex-1">{opt.title}</span>
+                </label>
+              )
+            })}
+          </div>
+          {hasError && <p className="text-[11px] text-destructive font-semibold">{errors[q.id]}</p>}
+        </div>
+      )
+    }
+
+    // B. Single Choice / Select
+    if ((q.answerType === 'singleChoice' || q.answerType === 'select') && q.options && q.options.length > 0) {
+      return (
+        <div key={q.id} className="space-y-1">
+          <Label className="text-xs font-bold text-foreground leading-snug">
+            {q.question || q.title} {q.required && <span className="text-destructive">*</span>}
+          </Label>
+          {q.subTitle && <p className="text-[11px] text-muted-foreground leading-normal">{q.subTitle}</p>}
+
           <select
             value={val}
             onChange={(e) => handleFieldChange(q.id, e.target.value)}
-            className="h-10 w-full rounded-xl border border-input bg-background px-3 text-xs text-foreground outline-none focus:border-primary"
+            className="h-11 w-full rounded-xl border border-input bg-background px-3 text-xs text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-ring/25"
           >
             <option value="">Selecione uma opção</option>
             {q.options.map((opt) => (
@@ -650,23 +797,78 @@ export function ApplicationFormWizard({
               </option>
             ))}
           </select>
-        ) : q.answerType === 'textarea' ? (
+          {hasError && <p className="text-[11px] text-destructive font-semibold">{errors[q.id]}</p>}
+        </div>
+      )
+    }
+
+    // C. Long Text / Textarea
+    if (q.answerType === 'longText' || q.answerType === 'textarea') {
+      return (
+        <div key={q.id} className="space-y-1">
+          <Label className="text-xs font-bold text-foreground leading-snug">
+            {q.question || q.title} {q.required && <span className="text-destructive">*</span>}
+          </Label>
+          {q.subTitle && <p className="text-[11px] text-muted-foreground leading-normal">{q.subTitle}</p>}
+
           <textarea
             value={val}
             onChange={(e) => handleFieldChange(q.id, e.target.value)}
             placeholder={q.placeholder || 'Sua resposta…'}
-            rows={2}
-            className="w-full rounded-xl border border-input bg-background p-2.5 text-xs text-foreground placeholder:text-muted-foreground outline-none focus:border-primary resize-none"
+            rows={3}
+            className="w-full rounded-xl border border-input bg-background p-3 text-xs text-foreground placeholder:text-muted-foreground outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-ring/25 resize-none"
           />
-        ) : (
-          <Input
-            value={val}
-            onChange={(e) => handleFieldChange(q.id, e.target.value)}
-            placeholder={q.placeholder || 'Sua resposta…'}
-            invalid={hasError}
-            className="h-10 text-xs rounded-xl bg-background"
-          />
-        )}
+          {hasError && <p className="text-[11px] text-destructive font-semibold">{errors[q.id]}</p>}
+        </div>
+      )
+    }
+
+    // D. File Upload (e.g. Laudo Médico PCD / Certificados)
+    if (q.answerType === 'fileUpload' || q.answerType === 'file') {
+      return (
+        <div key={q.id} className="space-y-1.5">
+          <Label className="text-xs font-bold text-foreground leading-snug">
+            {q.question || q.title} {q.required && <span className="text-destructive">*</span>}
+          </Label>
+          {q.subTitle && <p className="text-[11px] text-muted-foreground leading-normal">{q.subTitle}</p>}
+
+          <div className="flex items-center gap-3 rounded-xl border border-dashed border-input bg-accent/20 p-3">
+            <Upload className="size-5 text-muted-foreground shrink-0" />
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-bold text-foreground truncate">
+                {val ? 'Documento anexado' : 'Anexar documento (PDF, PNG, JPG)'}
+              </p>
+              <p className="text-[11px] text-muted-foreground">Tamanho máximo: 10MB</p>
+            </div>
+            <Input
+              type="file"
+              onChange={(e) => {
+                const file = e.target.files?.[0]
+                if (file) handleFieldChange(q.id, file.name)
+              }}
+              className="w-24 text-[10px] h-8 file:hidden cursor-pointer"
+            />
+          </div>
+          {hasError && <p className="text-[11px] text-destructive font-semibold">{errors[q.id]}</p>}
+        </div>
+      )
+    }
+
+    // E. Short Text / Default Fallback
+    return (
+      <div key={q.id} className="space-y-1">
+        <Label className="text-xs font-bold text-foreground leading-snug">
+          {q.question || q.title} {q.required && <span className="text-destructive">*</span>}
+        </Label>
+        {q.subTitle && <p className="text-[11px] text-muted-foreground leading-normal">{q.subTitle}</p>}
+
+        <Input
+          value={val}
+          onChange={(e) => handleFieldChange(q.id, e.target.value)}
+          placeholder={q.placeholder || 'Sua resposta…'}
+          invalid={hasError}
+          className="h-11 text-xs rounded-xl bg-background border-input focus-within:border-primary"
+        />
         {hasError && <p className="text-[11px] text-destructive font-semibold">{errors[q.id]}</p>}
       </div>
     )
@@ -948,4 +1150,12 @@ export function ApplicationFormWizard({
       </div>
     </Card>
   )
+}
+
+function humanizeKey(key: string): string {
+  const humanized = key
+    .replace(/([A-Z])/g, ' $1')
+    .replace(/[_-]/g, ' ')
+    .trim()
+  return humanized.charAt(0).toUpperCase() + humanized.slice(1)
 }
