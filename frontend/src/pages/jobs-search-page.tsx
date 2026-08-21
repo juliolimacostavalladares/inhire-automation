@@ -83,6 +83,7 @@ export function JobsSearchPage() {
           ? (selectedArea !== 'recommended' && selectedArea !== 'all' ? selectedArea : undefined)
           : (selectedArea === 'recommended' && candidateArea ? candidateArea : selectedArea === 'all' ? undefined : selectedArea),
       firstSeenFrom: fromDate,
+      publishedFrom: fromDate,
     }
   }, [keyword, locationInput, workplaceType, selectedArea, candidateArea, publishedDate, currentPage, recentFrom, monthFrom])
 
@@ -125,7 +126,7 @@ export function JobsSearchPage() {
     setKeyword('')
     setLocationInput('')
     setWorkplaceType('all')
-    setSelectedArea('recommended')
+    setSelectedArea('all')
     setPublishedDate('all')
     setCurrentPage(1)
     setOpenDropdown(null)
@@ -138,23 +139,23 @@ export function JobsSearchPage() {
   }
 
   const hasActiveFilters =
-    keyword !== '' ||
-    locationInput !== '' ||
+    Boolean(keyword.trim()) ||
+    Boolean(locationInput.trim()) ||
     workplaceType !== 'all' ||
-    publishedDate !== 'all' ||
-    (selectedArea !== 'recommended' && selectedArea !== 'all')
+    selectedArea !== 'all' ||
+    publishedDate !== 'all'
 
   const paginationRange = useMemo(() => {
-    if (pages <= 7) {
+    if (pages <= 5) {
       return Array.from({ length: pages }, (_, i) => i + 1)
     }
 
-    if (currentPage <= 4) {
-      return [1, 2, 3, 4, 5, 'ellipsis', pages] as (number | 'ellipsis')[]
+    if (currentPage <= 3) {
+      return [1, 2, 3, 4, 'ellipsis', pages] as (number | 'ellipsis')[]
     }
 
-    if (currentPage >= pages - 3) {
-      return [1, 'ellipsis', pages - 4, pages - 3, pages - 2, pages - 1, pages] as (number | 'ellipsis')[]
+    if (currentPage >= pages - 2) {
+      return [1, 'ellipsis', pages - 3, pages - 2, pages - 1, pages] as (number | 'ellipsis')[]
     }
 
     return [1, 'ellipsis', currentPage - 1, currentPage, currentPage + 1, 'ellipsis', pages] as (number | 'ellipsis')[]
@@ -187,6 +188,7 @@ export function JobsSearchPage() {
     { value: 'Comercial e Vendas', label: 'Comercial & Vendas' },
     { value: 'Marketing e Comunicação', label: 'Marketing' },
     { value: 'Operações e Serviços', label: 'Operações & Logística' },
+    { value: 'Jurídico e Compliance', label: 'Jurídico & Compliance' },
   ]
 
   const currentAreaLabel =
@@ -194,7 +196,7 @@ export function JobsSearchPage() {
       ? `Área: ${candidateArea}`
       : selectedArea === 'all'
         ? 'Área de atuação'
-        : `Área: ${selectedArea}`
+        : (areaOptions.find((o) => o.value === selectedArea)?.label ?? `Área: ${selectedArea}`)
 
   return (
     <div className="min-h-svh bg-canvas">

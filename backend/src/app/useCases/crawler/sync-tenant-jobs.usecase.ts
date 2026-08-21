@@ -6,7 +6,6 @@ import { sanitizeJobDescription } from '../../../infra/utils/job-description.uti
 import { buildApplicationForm } from '../../../infra/utils/application-form.util';
 import { jobSlug } from '../../../infra/utils/slug.util';
 import { PrismaService } from '../../../infra/databases/prisma/prisma.service';
-import { matchesArea } from '../../../infra/utils/job-area-classifier.util';
 
 export interface ISyncTenantJobsResult {
   created: number;
@@ -41,23 +40,7 @@ export class SyncTenantJobsUseCase {
       ).values(),
     ];
 
-    // Busca áreas profissionais ativas de candidatos cadastrados na plataforma
-    const activeProfiles = await this.prisma.candidateProfile.findMany({
-      where: { status: { in: ['COMPLETE', 'NEEDS_REVIEW'] } },
-      select: { professionalArea: true, professionalTitle: true },
-    });
-
-    const activeAreas = activeProfiles
-      .map((p) => p.professionalArea || p.professionalTitle)
-      .filter((a): a is string => Boolean(a && a.trim()));
-
-    // Filtra vagas pertinentes às áreas de atuação dos candidatos cadastrados
-    const published =
-      activeAreas.length > 0
-        ? publishedRaw.filter((job) =>
-            activeAreas.some((area) => matchesArea(job.displayName || '', area)),
-          )
-        : publishedRaw;
+    const published = publishedRaw;
     const externalIds = published.map((job) => job.jobId);
     const existing = await this.prisma.job.findMany({
       where: { tenantId, externalId: { in: externalIds } },
