@@ -115,6 +115,8 @@ export function JobDetailsPage() {
             jobTitle={job.title}
             company={job.company}
             jobUrl={job.url}
+            workplace={job.workplace}
+            location={job.location}
             initialFormStructure={job.applicationForm as ApplicationFormStructure | undefined}
             isFavorited={favorites.has(job.id)}
             onToggleFavorite={() => toggleFavorite(job.id)}
