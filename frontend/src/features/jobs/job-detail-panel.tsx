@@ -90,20 +90,17 @@ export function JobDetailPanel({ job, detailError, favorite, onFavorite, onClose
           </div>
 
           <section className="mt-7">
-            <h3 className="text-sm font-extrabold">Sobre a vaga</h3>
-            <article className="mt-3 text-sm leading-6 text-muted-foreground" dangerouslySetInnerHTML={{ __html: job.descriptionHtml ?? job.description }}></article>
-          </section>
-
-          <section className="mt-7">
-            <h3 className="text-sm font-extrabold">Principais requisitos</h3>
-            <ul className="mt-3 space-y-3 text-sm leading-5 text-muted-foreground">
-              {job.requirements.map((requirement) => (
-                <li key={requirement} className="flex gap-3">
-                  <span className="mt-2 size-1.5 shrink-0 rounded-full bg-primary" />
-                  {requirement}
-                </li>
-              ))}
-            </ul>
+            <h3 className="mb-4 text-base font-extrabold text-foreground">Descrição da vaga</h3>
+            {job.descriptionHtml ? (
+              <div
+                className="prose max-w-none text-sm leading-relaxed text-muted-foreground [&_h1]:text-lg [&_h1]:font-extrabold [&_h1]:text-foreground [&_h1]:mt-5 [&_h1]:mb-2.5 [&_h2]:text-base [&_h2]:font-bold [&_h2]:text-foreground [&_h2]:mt-4 [&_h2]:mb-2 [&_h3]:text-sm [&_h3]:font-bold [&_h3]:text-foreground [&_h3]:mt-3 [&_h3]:mb-1.5 [&_p]:mb-3 [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:mb-3 [&_ul]:space-y-1 [&_ol]:list-decimal [&_ol]:pl-5 [&_ol]:mb-3 [&_ol]:space-y-1 [&_li]:text-muted-foreground [&_strong]:text-foreground [&_strong]:font-bold [&_b]:text-foreground [&_b]:font-bold [&_a]:text-primary [&_a]:underline"
+                dangerouslySetInnerHTML={{ __html: job.descriptionHtml }}
+              />
+            ) : (
+              <p className="whitespace-pre-line text-sm leading-6 text-muted-foreground">
+                {job.description}
+              </p>
+            )}
           </section>
         </div>
 
