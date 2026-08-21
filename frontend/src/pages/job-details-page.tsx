@@ -8,8 +8,8 @@ import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
 import { useJobs } from '@/features/jobs/use-jobs'
-import { TailoredResumeCard } from '@/features/jobs/tailored-resume-card'
 import { ApplicationFormWizard } from '@/features/jobs/application-form-wizard'
+import type { ApplicationFormStructure } from '@/features/jobs/jobs.api'
 
 export function JobDetailsPage() {
   const { id } = useParams<{ id: string }>()
@@ -115,11 +115,11 @@ export function JobDetailsPage() {
             jobTitle={job.title}
             company={job.company}
             jobUrl={job.url}
+            initialFormStructure={job.applicationForm as ApplicationFormStructure | undefined}
             isFavorited={favorites.has(job.id)}
             onToggleFavorite={() => toggleFavorite(job.id)}
           />
 
-          <TailoredResumeCard jobId={job.id} jobTitle={job.title} />
         </aside>
       </main>
     </div>

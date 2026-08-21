@@ -95,6 +95,7 @@ export function mapApiJob(apiJob: ApiJob): Job {
     requirements: [],
     url: apiJob.url,
     status: apiJob.status,
+    applicationForm: (apiJob.applicationForm as ApplicationFormStructure | undefined) ?? null,
   }
 }
 
