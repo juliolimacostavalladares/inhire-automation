@@ -70,6 +70,8 @@ export function JobsSearchPage() {
           ? monthFrom
           : undefined
 
+    const hasSearchKeyword = Boolean(keyword.trim())
+
     return {
       page: currentPage,
       limit: 10,
@@ -77,11 +79,9 @@ export function JobsSearchPage() {
       location: locationInput.trim() || undefined,
       workplaceType: workplaceType === 'all' ? undefined : workplaceType,
       area:
-        selectedArea === 'recommended' && candidateArea
-          ? candidateArea
-          : selectedArea === 'all'
-            ? undefined
-            : selectedArea,
+        hasSearchKeyword
+          ? (selectedArea !== 'recommended' && selectedArea !== 'all' ? selectedArea : undefined)
+          : (selectedArea === 'recommended' && candidateArea ? candidateArea : selectedArea === 'all' ? undefined : selectedArea),
       firstSeenFrom: fromDate,
     }
   }, [keyword, locationInput, workplaceType, selectedArea, candidateArea, publishedDate, currentPage, recentFrom, monthFrom])
@@ -449,16 +449,20 @@ export function JobsSearchPage() {
         <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-border/60 pb-4">
           <div>
             <h2 className="text-xl sm:text-2xl font-extrabold tracking-tight text-foreground">
-              {selectedArea === 'recommended' && candidateArea
-                ? `Vagas para você em ${candidateArea}`
-                : selectedArea !== 'all'
-                  ? `Vagas em ${selectedArea}`
-                  : 'Todas as vagas disponíveis'}
+              {keyword
+                ? `Vagas para "${keyword}"`
+                : selectedArea === 'recommended' && candidateArea
+                  ? `Vagas para você em ${candidateArea}`
+                  : selectedArea !== 'all'
+                    ? `Vagas em ${selectedArea}`
+                    : 'Todas as vagas disponíveis'}
             </h2>
             <p className="text-xs text-muted-foreground mt-1">
-              {selectedArea === 'recommended' && candidateArea
-                ? 'Selecionadas e ordenadas para o seu perfil profissional.'
-                : 'Oportunidades em tempo real sincronizadas da plataforma InHire.'}
+              {keyword
+                ? 'Resultados em todas as empresas e áreas de atuação.'
+                : selectedArea === 'recommended' && candidateArea
+                  ? 'Selecionadas e ordenadas para o seu perfil profissional.'
+                  : 'Oportunidades em tempo real sincronizadas da plataforma InHire.'}
             </p>
           </div>
           <span className="text-xs font-bold text-muted-foreground bg-card border border-border/80 rounded-full px-3 py-1.5 shadow-2xs w-fit">
