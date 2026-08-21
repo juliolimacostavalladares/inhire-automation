@@ -108,8 +108,79 @@ export async function getJob(id: string) {
   return mapApiJob(data)
 }
 
-export async function getApplicationForm(id: string) {
-  const { data } = await http.get(`/jobs/${encodeURIComponent(id)}/application-form`)
+export interface ApplicationFormField {
+  key: string
+  type: string
+  required: boolean
+  options: string[]
+}
+
+export interface DiversityQuestionOption {
+  id: string
+  title: string | null
+  descriptionHtml?: string | null
+  revealsQuestionIds: string[]
+}
+
+export interface DiversityQuestion {
+  id: string
+  title: string | null
+  question: string | null
+  descriptionHtml?: string | null
+  subTitle?: string | null
+  placeholder?: string | null
+  answerType: string
+  required: boolean
+  diversityGroup?: string | null
+  dependsOnQuestionId?: string | null
+  options: DiversityQuestionOption[]
+}
+
+export interface ApplicationFormStructure {
+  version: number
+  recaptchaRequired: boolean
+  privacyPolicyUrl: string | null
+  fields: ApplicationFormField[]
+  diversityIntroductionHtml?: string | null
+  diversityQuestions: DiversityQuestion[]
+}
+
+export async function getApplicationForm(id: string): Promise<ApplicationFormStructure | null> {
+  try {
+    const { data } = await http.get<ApplicationFormStructure>(`/jobs/${encodeURIComponent(id)}/application-form`)
+    return data
+  } catch {
+    return null
+  }
+}
+
+export interface ApplyJobPayload {
+  name: string
+  email: string
+  phone: string
+  location?: string
+  linkedinUrl?: string
+  salaryExpectation?: string
+  contractType?: string
+  workModel?: string
+  coverNote?: string
+  resumeType?: string
+  answers?: Record<string, unknown>
+  privacyPolicyAccepted: boolean
+}
+
+export interface ApplyJobResponse {
+  success: boolean
+  message: string
+  jobId: string
+  jobTitle: string
+  company: string
+  appliedAt: string
+  externalUrl: string
+}
+
+export async function applyToJob(jobId: string, payload: ApplyJobPayload): Promise<ApplyJobResponse> {
+  const { data } = await http.post<ApplyJobResponse>(`/jobs/${encodeURIComponent(jobId)}/apply`, payload)
   return data
 }
 

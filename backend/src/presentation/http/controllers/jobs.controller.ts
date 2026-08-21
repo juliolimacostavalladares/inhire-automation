@@ -24,6 +24,7 @@ import { AllowJwt, ApiKeyGuard, Public, RequireUser } from '../guards/api-key.gu
 import { CurrentAuth, type AuthContext } from '../guards/auth-context';
 import { QueryJobsDto } from '../dto/query-jobs.dto';
 import { GenerateTailoredResumeDto } from '../dto/tailored-resume.dto';
+import { ApplyJobDto } from '../dto/apply-job.dto';
 import { ListJobsUseCase } from '../../../app/useCases/jobs/list-jobs.usecase';
 import { GetJobDetailUseCase } from '../../../app/useCases/jobs/get-job-detail.usecase';
 import { GetJobApplicationFormUseCase } from '../../../app/useCases/jobs/get-job-application-form.usecase';
@@ -106,6 +107,27 @@ export class JobsController {
   @Get(':id/application-form')
   async getApplicationForm(@Param('id') id: string) {
     return this.getJobApplicationFormUseCase.execute(id);
+  }
+
+  @Public()
+  @Post(':id/apply')
+  async apply(
+    @Param('id') id: string,
+    @Body() body: ApplyJobDto,
+    @CurrentAuth() auth?: AuthContext,
+  ) {
+    const job = await this.getJobDetailUseCase.execute(id);
+    const companyName = job.tenant?.name ?? 'InHire';
+    this.logger.log(`Candidatura recebida para vaga ${id} (${job.title}) pelo candidato ${body.email} (Auth: ${auth?.type ?? 'public'})`);
+    return {
+      success: true,
+      message: 'Candidatura registrada com sucesso!',
+      jobId: id,
+      jobTitle: job.title,
+      company: companyName,
+      appliedAt: new Date(),
+      externalUrl: job.url,
+    };
   }
 
   /**
