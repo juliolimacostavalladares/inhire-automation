@@ -107,7 +107,11 @@ export class PrismaJobsRepository implements IJobsRepository {
               title: { contains: keyword, mode: 'insensitive' as const },
             })),
           }
-        : undefined;
+        : filter.area
+          ? {
+              title: { contains: filter.area, mode: 'insensitive' as const },
+            }
+          : undefined;
 
     const titleOrCompanyCondition: Prisma.JobWhereInput | undefined = filter.title
       ? {
@@ -127,33 +131,58 @@ export class PrismaJobsRepository implements IJobsRepository {
       conditions.push(areaCondition);
     }
 
+    if (filter.workplaceType) {
+      const wt = filter.workplaceType.toLowerCase();
+      if (wt.includes('remot') || wt === 'remote') {
+        conditions.push({
+          OR: [
+            { workplaceType: { contains: 'remot', mode: 'insensitive' } },
+            { workplaceType: { contains: 'remote', mode: 'insensitive' } },
+          ],
+        });
+      } else if (wt.includes('hibr') || wt.includes('hybr') || wt === 'hybrid') {
+        conditions.push({
+          OR: [
+            { workplaceType: { contains: 'hibr', mode: 'insensitive' } },
+            { workplaceType: { contains: 'híbr', mode: 'insensitive' } },
+            { workplaceType: { contains: 'hybrid', mode: 'insensitive' } },
+          ],
+        });
+      } else if (wt.includes('presenc') || wt.includes('site') || wt.includes('on-site')) {
+        conditions.push({
+          OR: [
+            { workplaceType: { contains: 'presenc', mode: 'insensitive' } },
+            { workplaceType: { contains: 'site', mode: 'insensitive' } },
+            { workplaceType: { contains: 'on-site', mode: 'insensitive' } },
+          ],
+        });
+      } else {
+        conditions.push({
+          workplaceType: { contains: filter.workplaceType, mode: 'insensitive' },
+        });
+      }
+    }
+
+    if (filter.publishedFrom || filter.firstSeenFrom) {
+      const fromDate = new Date(filter.publishedFrom || filter.firstSeenFrom!);
+      conditions.push({
+        OR: [
+          { publishedAt: { gte: fromDate } },
+          { firstSeenAt: { gte: fromDate } },
+        ],
+      });
+    }
+
     const where: Prisma.JobWhereInput = {
       tenantId: filter.tenantId,
       tenant: filter.tenantSlug
         ? { slug: { equals: filter.tenantSlug, mode: 'insensitive' } }
         : undefined,
       status: filter.status,
-      workplaceType: filter.workplaceType
-        ? { contains: filter.workplaceType, mode: 'insensitive' }
-        : undefined,
       location: filter.location
         ? { contains: filter.location, mode: 'insensitive' }
         : undefined,
       ...(conditions.length > 0 ? { AND: conditions } : {}),
-      firstSeenAt:
-        filter.firstSeenFrom || filter.firstSeenTo
-          ? {
-              gte: filter.firstSeenFrom ? new Date(filter.firstSeenFrom) : undefined,
-              lte: filter.firstSeenTo ? new Date(filter.firstSeenTo) : undefined,
-            }
-          : undefined,
-      publishedAt:
-        filter.publishedFrom || filter.publishedTo
-          ? {
-              gte: filter.publishedFrom ? new Date(filter.publishedFrom) : undefined,
-              lte: filter.publishedTo ? new Date(filter.publishedTo) : undefined,
-            }
-          : undefined,
     };
 
     const [data, total] = await this.prisma.$transaction([
