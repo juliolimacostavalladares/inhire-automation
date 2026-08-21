@@ -5,6 +5,8 @@ import {
   TENANTS_REPOSITORY_TOKEN,
 } from '../../repositories/tenants.repository.interface';
 
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 @Injectable()
 export class GetTenantUseCase {
   constructor(
@@ -13,11 +15,20 @@ export class GetTenantUseCase {
   ) {}
 
   async execute(idOrSlug: string): Promise<ITenantOutputDTO> {
-    let tenant = await this.tenantsRepository.findById(idOrSlug);
+    let tenant: ITenantOutputDTO | null = null;
+
+    if (UUID_REGEX.test(idOrSlug)) {
+      tenant = await this.tenantsRepository.findById(idOrSlug);
+    }
+
     if (!tenant) {
       tenant = await this.tenantsRepository.findBySlug(idOrSlug);
     }
-    if (!tenant) throw new NotFoundException('Tenant not found');
+
+    if (!tenant) {
+      throw new NotFoundException('Tenant not found');
+    }
+
     return tenant;
   }
 }

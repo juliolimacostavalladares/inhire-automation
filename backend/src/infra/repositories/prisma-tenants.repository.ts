@@ -53,6 +53,9 @@ export class PrismaTenantsRepository implements ITenantsRepository {
   }
 
   async findById(id: string): Promise<ITenantOutputDTO | null> {
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) {
+      return null;
+    }
     const tenant = await this.prisma.tenant.findUnique({
       where: { id },
       include: { _count: { select: { jobs: true } } },
@@ -65,8 +68,13 @@ export class PrismaTenantsRepository implements ITenantsRepository {
   }
 
   async findBySlug(slug: string): Promise<ITenantOutputDTO | null> {
-    const tenant = await this.prisma.tenant.findUnique({
-      where: { slug },
+    const tenant = await this.prisma.tenant.findFirst({
+      where: {
+        OR: [
+          { slug: { equals: slug, mode: 'insensitive' } },
+          { name: { equals: slug, mode: 'insensitive' } },
+        ],
+      },
       include: { _count: { select: { jobs: true } } },
     });
     if (!tenant) return null;
