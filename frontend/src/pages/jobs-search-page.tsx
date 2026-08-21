@@ -1,10 +1,21 @@
-import { useEffect, useMemo, useState } from 'react'
-import { ArrowRight, Search, SlidersHorizontal, Sparkles, UserCheck } from 'lucide-react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import {
+  ArrowRight,
+  ChevronDown,
+  Clock,
+  Briefcase,
+  Layers,
+  MapPin,
+  RotateCcw,
+  Search,
+  Sparkles,
+  UserCheck,
+  X,
+} from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { CandidateTopbar } from '@/components/layout/candidate-topbar'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
 import {
   Pagination,
   PaginationContent,
@@ -19,27 +30,61 @@ import { useJobsStore } from '@/features/jobs/jobs.store'
 import { useAuth } from '@/features/auth/use-auth'
 import { cn } from '@/lib/utils'
 
-type QuickFilter = 'recommended' | 'recent' | 'remote' | 'tech' | 'health' | 'finance' | 'all'
+type WorkplaceFilter = 'all' | 'Remote' | 'Hybrid' | 'On-site'
+type DateFilter = 'all' | 'recent' | 'month'
 
 export function JobsSearchPage() {
-  const [query, setQuery] = useState('')
+  const [keyword, setKeyword] = useState('')
+  const [locationInput, setLocationInput] = useState('')
+  const [workplaceType, setWorkplaceType] = useState<WorkplaceFilter>('all')
+  const [selectedArea, setSelectedArea] = useState<string>('recommended')
+  const [publishedDate, setPublishedDate] = useState<DateFilter>('all')
   const [currentPage, setCurrentPage] = useState(1)
-  const [activeFilter, setActiveFilter] = useState<QuickFilter>('recommended')
   const [recentFrom] = useState(() => new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString())
+  const [monthFrom] = useState(() => new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString())
+
+  // Dropdown open states
+  const [openDropdown, setOpenDropdown] = useState<'workplace' | 'area' | 'date' | null>(null)
+  const dropdownRef = useRef<HTMLDivElement>(null)
+
   const { jobs, total, pages, limit, candidateArea, profileComplete, favorites, loading, error, fetchJobs, toggleFavorite } = useJobsStore()
   const { user } = useAuth()
 
-  const request = useMemo(() => ({
-    page: currentPage,
-    limit: 10,
-    ...(activeFilter === 'recent' ? { firstSeenFrom: recentFrom } : {}),
-    ...(activeFilter === 'remote' ? { workplaceType: 'Remote' } : {}),
-    ...(activeFilter === 'tech' ? { area: 'Tecnologia' } : {}),
-    ...(activeFilter === 'health' ? { area: 'Saúde e Medicina' } : {}),
-    ...(activeFilter === 'finance' ? { area: 'Finanças' } : {}),
-    ...(activeFilter === 'recommended' && candidateArea ? { area: candidateArea } : {}),
-    title: query.trim() || undefined,
-  }), [activeFilter, query, recentFrom, candidateArea, currentPage])
+  // Close dropdown on outside click
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setOpenDropdown(null)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
+  // Build request payload
+  const request = useMemo(() => {
+    const fromDate =
+      publishedDate === 'recent'
+        ? recentFrom
+        : publishedDate === 'month'
+          ? monthFrom
+          : undefined
+
+    return {
+      page: currentPage,
+      limit: 10,
+      title: keyword.trim() || undefined,
+      location: locationInput.trim() || undefined,
+      workplaceType: workplaceType === 'all' ? undefined : workplaceType,
+      area:
+        selectedArea === 'recommended' && candidateArea
+          ? candidateArea
+          : selectedArea === 'all'
+            ? undefined
+            : selectedArea,
+      firstSeenFrom: fromDate,
+    }
+  }, [keyword, locationInput, workplaceType, selectedArea, candidateArea, publishedDate, currentPage, recentFrom, monthFrom])
 
   useEffect(() => {
     const timeout = window.setTimeout(() => {
@@ -48,21 +93,56 @@ export function JobsSearchPage() {
     return () => window.clearTimeout(timeout)
   }, [fetchJobs, request])
 
-  const handleQueryChange = (val: string) => {
-    setQuery(val)
+  const handleKeywordChange = (val: string) => {
+    setKeyword(val)
     setCurrentPage(1)
   }
 
-  const handleFilterChange = (filter: QuickFilter) => {
-    setActiveFilter(filter)
+  const handleLocationChange = (val: string) => {
+    setLocationInput(val)
     setCurrentPage(1)
+  }
+
+  const handleWorkplaceChange = (type: WorkplaceFilter) => {
+    setWorkplaceType(type)
+    setOpenDropdown(null)
+    setCurrentPage(1)
+  }
+
+  const handleAreaChange = (area: string) => {
+    setSelectedArea(area)
+    setOpenDropdown(null)
+    setCurrentPage(1)
+  }
+
+  const handleDateChange = (date: DateFilter) => {
+    setPublishedDate(date)
+    setOpenDropdown(null)
+    setCurrentPage(1)
+  }
+
+  const handleResetFilters = () => {
+    setKeyword('')
+    setLocationInput('')
+    setWorkplaceType('all')
+    setSelectedArea('recommended')
+    setPublishedDate('all')
+    setCurrentPage(1)
+    setOpenDropdown(null)
   }
 
   const handlePageChange = (page: number) => {
     if (page < 1 || page > pages || page === currentPage) return
     setCurrentPage(page)
-    window.scrollTo({ top: 0, behavior: 'smooth' })
+    window.scrollTo({ top: 400, behavior: 'smooth' })
   }
+
+  const hasActiveFilters =
+    keyword !== '' ||
+    locationInput !== '' ||
+    workplaceType !== 'all' ||
+    publishedDate !== 'all' ||
+    (selectedArea !== 'recommended' && selectedArea !== 'all')
 
   const paginationRange = useMemo(() => {
     if (pages <= 7) {
@@ -83,153 +163,305 @@ export function JobsSearchPage() {
   const startRange = total === 0 ? 0 : (currentPage - 1) * limit + 1
   const endRange = Math.min(currentPage * limit, total)
 
+  const workplaceLabels: Record<WorkplaceFilter, string> = {
+    all: 'Tipo de vaga',
+    Remote: 'Remoto',
+    Hybrid: 'Híbrido',
+    'On-site': 'Presencial',
+  }
+
+  const dateLabels: Record<DateFilter, string> = {
+    all: 'Data de publicação',
+    recent: 'Últimas 2 semanas',
+    month: 'Últimos 30 dias',
+  }
+
+  const areaOptions = [
+    ...(user && candidateArea ? [{ value: 'recommended', label: `Para você (${candidateArea})` }] : []),
+    { value: 'all', label: 'Todas as áreas' },
+    { value: 'Tecnologia', label: 'Tecnologia & Software' },
+    { value: 'Saúde e Medicina', label: 'Saúde & Medicina' },
+    { value: 'Finanças e Contabilidade', label: 'Finanças & Contabilidade' },
+    { value: 'Design e Produto', label: 'Design & Produto' },
+    { value: 'Recursos Humanos', label: 'Recursos Humanos' },
+    { value: 'Comercial e Vendas', label: 'Comercial & Vendas' },
+    { value: 'Marketing e Comunicação', label: 'Marketing' },
+    { value: 'Operações e Serviços', label: 'Operações & Logística' },
+  ]
+
+  const currentAreaLabel =
+    selectedArea === 'recommended' && candidateArea
+      ? `Área: ${candidateArea}`
+      : selectedArea === 'all'
+        ? 'Área de atuação'
+        : `Área: ${selectedArea}`
+
   return (
     <div className="min-h-svh bg-canvas">
       <CandidateTopbar />
 
-      <main className="mx-auto max-w-7xl px-5 py-8 sm:px-8 lg:px-10 lg:py-10">
-        {/* Title Header matching InHire design prototype */}
-        <div className="mb-6">
-          <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-foreground">
-            Encontre sua próxima oportunidade
+      {/* HERO SECTION */}
+      <section className="relative border-b border-border/70 bg-gradient-to-b from-primary/10 via-card/50 to-canvas pt-12 pb-14 sm:pt-16 sm:pb-18 lg:pt-20 lg:pb-20">
+        <div className="mx-auto max-w-5xl px-5 text-center sm:px-8">
+          {/* Main Hero Headline */}
+          <h1 className="text-4xl font-black tracking-tight text-foreground sm:text-5xl lg:text-6xl">
+            Encontre a vaga ideal <span className="block mt-1 sm:mt-2 text-foreground">para o seu perfil</span>
           </h1>
-          <p className="mt-2 text-sm text-muted-foreground">
-            Vagas verificadas e atualizadas diariamente com base na sua área de atuação.
+
+          <p className="mx-auto mt-4 max-w-2xl text-sm sm:text-base text-muted-foreground leading-relaxed">
+            Centenas de oportunidades verificadas nas melhores empresas do Brasil.
+            <br className="hidden sm:inline" /> O próximo passo da sua carreira começa agora.
           </p>
-        </div>
 
-        {/* Profile Onboarding CTA if profile is not completed */}
-        {user && profileComplete === false && (
-          <Card className="mb-8 overflow-hidden rounded-2xl border-primary/40 bg-gradient-to-r from-accent/40 via-card to-card p-5 sm:p-6 shadow-xs">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex items-start gap-3.5">
-                <div className="grid size-11 shrink-0 place-items-center rounded-xl bg-primary text-primary-foreground font-black shadow-xs">
-                  <Sparkles className="size-5" />
+          {/* Profile Onboarding Notification Banner */}
+          {user && profileComplete === false && (
+            <div className="mx-auto mt-6 max-w-2xl">
+              <Card className="rounded-2xl border border-primary/40 bg-card p-3.5 sm:p-4 text-left shadow-xs flex flex-col sm:flex-row items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <div className="grid size-9 shrink-0 place-items-center rounded-xl bg-primary text-primary-foreground font-black shadow-xs">
+                    <Sparkles className="size-4" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-extrabold text-foreground">
+                      Complete seu perfil profissional com IA
+                    </p>
+                    <p className="text-[11px] text-muted-foreground">
+                      Nossa IA filtrará automaticamente as vagas perfeitas para a sua área.
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="text-base font-extrabold text-foreground">
-                    Complete seu perfil profissional com IA
-                  </h3>
-                  <p className="mt-1 text-xs text-muted-foreground max-w-xl leading-relaxed">
-                    Envie seu currículo ou PDF do LinkedIn para que nossa IA identifique sua área de atuação e filtre automaticamente as vagas ideais para o seu perfil.
-                  </p>
-                </div>
-              </div>
-              <Button asChild className="shrink-0 rounded-xl bg-primary text-primary-foreground font-bold shadow-xs hover:bg-primary/90">
-                <Link to="/onboarding/perfil" className="flex items-center gap-2">
-                  Montar meu perfil agora <ArrowRight className="size-4" />
-                </Link>
-              </Button>
+                <Button asChild size="sm" className="w-full sm:w-auto shrink-0 rounded-xl bg-primary text-primary-foreground font-bold shadow-xs hover:bg-primary/90 text-xs">
+                  <Link to="/onboarding/perfil" className="flex items-center gap-1.5">
+                    Completar perfil <ArrowRight className="size-3.5" />
+                  </Link>
+                </Button>
+              </Card>
             </div>
-          </Card>
-        )}
-
-        {/* Search & Filter Bar */}
-        <div className="mb-5 flex items-center gap-3">
-          <div className="relative flex-1">
-            <Input
-              className="h-12 rounded-xl border border-border bg-card pl-10 pr-4 text-sm shadow-xs focus-visible:ring-primary"
-              startIcon={<Search className="size-4 text-muted-foreground" />}
-              placeholder="Cargo, habilidade ou empresa"
-              value={query}
-              onChange={(event) => handleQueryChange(event.target.value)}
-              aria-label="Buscar vagas"
-            />
-          </div>
-          <Button
-            className="h-12 rounded-xl bg-primary px-5 font-bold text-primary-foreground shadow-xs hover:bg-primary/90 shrink-0 flex items-center gap-2"
-            aria-label="Filtrar vagas"
-          >
-            <SlidersHorizontal className="size-4" />
-            <span className="hidden sm:inline">Filtros</span>
-          </Button>
-        </div>
-
-        {/* Quick Filter Chips */}
-        <div className="mb-8 flex gap-2.5 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          {user && candidateArea && (
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className={cn(
-                'h-8.5 rounded-full px-4 text-xs transition-all shadow-2xs',
-                activeFilter === 'recommended'
-                  ? 'bg-primary text-primary-foreground font-extrabold border-primary hover:bg-primary/90'
-                  : 'border-border bg-card text-foreground font-semibold hover:border-foreground/30',
-              )}
-              aria-pressed={activeFilter === 'recommended'}
-              onClick={() => handleFilterChange('recommended')}
-            >
-              <UserCheck className="mr-1.5 size-3.5" />
-              Para você ({candidateArea})
-            </Button>
           )}
 
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className={cn(
-              'h-8.5 rounded-full px-4 text-xs transition-all shadow-2xs',
-              activeFilter === 'recent'
-                ? 'bg-primary text-primary-foreground font-extrabold border-primary hover:bg-primary/90'
-                : 'border-border bg-card text-foreground font-semibold hover:border-foreground/30',
-            )}
-            aria-pressed={activeFilter === 'recent'}
-            onClick={() => handleFilterChange('recent')}
-          >
-            Últimas 2 semanas
-          </Button>
+          {/* FLOATING UNIFIED DUAL-INPUT SEARCH BAR */}
+          <div className="mx-auto mt-8 max-w-4xl">
+            <div className="rounded-2xl sm:rounded-full border border-border/80 bg-card p-2 sm:p-2.5 shadow-lg shadow-foreground/[0.03] transition-all focus-within:border-foreground/30 focus-within:shadow-xl flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-0">
+              {/* Keyword Input */}
+              <div className="relative flex flex-1 items-center px-3 sm:px-4">
+                <Search className="size-5 shrink-0 text-muted-foreground/70 mr-3" />
+                <input
+                  type="text"
+                  className="h-11 sm:h-12 w-full bg-transparent text-sm sm:text-base text-foreground placeholder:text-muted-foreground/70 outline-none"
+                  placeholder="Buscar por palavras-chave no título e descrição"
+                  value={keyword}
+                  onChange={(e) => handleKeywordChange(e.target.value)}
+                  aria-label="Buscar por palavras-chave"
+                />
+                {keyword && (
+                  <button
+                    type="button"
+                    onClick={() => handleKeywordChange('')}
+                    className="p-1 text-muted-foreground hover:text-foreground"
+                    aria-label="Limpar termo de busca"
+                  >
+                    <X className="size-4" />
+                  </button>
+                )}
+              </div>
 
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className={cn(
-              'h-8.5 rounded-full px-4 text-xs transition-all shadow-2xs',
-              activeFilter === 'remote'
-                ? 'bg-primary text-primary-foreground font-extrabold border-primary hover:bg-primary/90'
-                : 'border-border bg-card text-foreground font-semibold hover:border-foreground/30',
-            )}
-            aria-pressed={activeFilter === 'remote'}
-            onClick={() => handleFilterChange('remote')}
-          >
-            Remoto
-          </Button>
+              {/* Desktop Vertical Divider */}
+              <div className="hidden sm:block h-8 w-[1px] bg-border mx-1 shrink-0" />
 
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className={cn(
-              'h-8.5 rounded-full px-4 text-xs transition-all shadow-2xs',
-              activeFilter === 'all'
-                ? 'bg-primary text-primary-foreground font-extrabold border-primary hover:bg-primary/90'
-                : 'border-border bg-card text-foreground font-semibold hover:border-foreground/30',
-            )}
-            aria-pressed={activeFilter === 'all'}
-            onClick={() => handleFilterChange('all')}
-          >
-            Todas as áreas
-          </Button>
-        </div>
+              {/* Location Input */}
+              <div className="relative flex flex-1 items-center px-3 sm:px-4 border-t sm:border-t-0 border-border/60 pt-2 sm:pt-0">
+                <MapPin className="size-5 shrink-0 text-muted-foreground/70 mr-3" />
+                <input
+                  type="text"
+                  className="h-11 sm:h-12 w-full bg-transparent text-sm sm:text-base text-foreground placeholder:text-muted-foreground/70 outline-none"
+                  placeholder="Localização (cidade, estado ou país)"
+                  value={locationInput}
+                  onChange={(e) => handleLocationChange(e.target.value)}
+                  aria-label="Buscar por localização"
+                />
+                {locationInput && (
+                  <button
+                    type="button"
+                    onClick={() => handleLocationChange('')}
+                    className="p-1 text-muted-foreground hover:text-foreground"
+                    aria-label="Limpar localização"
+                  >
+                    <X className="size-4" />
+                  </button>
+                )}
+              </div>
 
-        {/* Section Header: Title + Counter */}
-        <div className="mb-4 flex items-center justify-between">
-          <div>
-            <h2 className="text-xl font-extrabold tracking-tight text-foreground">
-              {candidateArea && activeFilter === 'recommended'
-                ? `Vagas em ${candidateArea}`
-                : 'Vagas para você'}
-            </h2>
-            {candidateArea && activeFilter === 'recommended' && (
-              <p className="text-xs text-muted-foreground mt-0.5">
-                Filtradas com base na área profissional do seu currículo.
-              </p>
+              {/* Submit / Action Button */}
+              <Button
+                type="button"
+                className="h-11 sm:h-12 rounded-xl sm:rounded-full bg-primary px-6 text-sm font-extrabold text-primary-foreground shadow-xs hover:bg-primary/90 shrink-0"
+                onClick={() => void fetchJobs(request)}
+              >
+                Buscar vagas
+              </Button>
+            </div>
+          </div>
+
+          {/* FILTER DROPDOWN PILLS */}
+          <div ref={dropdownRef} className="relative mx-auto mt-5 flex flex-wrap items-center justify-center gap-2.5">
+            {/* 1. Tipo de vaga */}
+            <div className="relative">
+              <button
+                type="button"
+                className={cn(
+                  'h-9 rounded-full px-4 text-xs font-bold transition-all shadow-2xs border inline-flex items-center gap-1.5',
+                  workplaceType !== 'all'
+                    ? 'bg-primary text-primary-foreground border-primary hover:bg-primary/90'
+                    : 'border-border bg-card text-foreground hover:border-foreground/30 hover:bg-accent/40',
+                )}
+                aria-expanded={openDropdown === 'workplace'}
+                onClick={() => setOpenDropdown(openDropdown === 'workplace' ? null : 'workplace')}
+              >
+                <Briefcase className="size-3.5" />
+                {workplaceLabels[workplaceType]}
+                <ChevronDown className={cn('size-3.5 transition-transform duration-200', openDropdown === 'workplace' && 'rotate-180')} />
+              </button>
+
+              {openDropdown === 'workplace' && (
+                <div className="absolute left-0 top-full z-50 mt-2 min-w-[12rem] rounded-2xl border border-border bg-popover p-1.5 shadow-xl text-left animate-in fade-in zoom-in-95 duration-150">
+                  {(['all', 'Remote', 'Hybrid', 'On-site'] as WorkplaceFilter[]).map((type) => (
+                    <button
+                      key={type}
+                      type="button"
+                      onClick={() => handleWorkplaceChange(type)}
+                      className={cn(
+                        'w-full rounded-xl px-3.5 py-2 text-xs font-semibold text-left transition-colors flex items-center justify-between',
+                        workplaceType === type
+                          ? 'bg-primary text-primary-foreground font-bold'
+                          : 'text-foreground hover:bg-accent',
+                      )}
+                    >
+                      {type === 'all' ? 'Todos os tipos' : workplaceLabels[type]}
+                      {workplaceType === type && <div className="size-1.5 rounded-full bg-primary-foreground" />}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* 2. Área de atuação */}
+            <div className="relative">
+              <button
+                type="button"
+                className={cn(
+                  'h-9 rounded-full px-4 text-xs font-bold transition-all shadow-2xs border inline-flex items-center gap-1.5',
+                  selectedArea !== 'all'
+                    ? 'bg-primary text-primary-foreground border-primary hover:bg-primary/90'
+                    : 'border-border bg-card text-foreground hover:border-foreground/30 hover:bg-accent/40',
+                )}
+                aria-expanded={openDropdown === 'area'}
+                onClick={() => setOpenDropdown(openDropdown === 'area' ? null : 'area')}
+              >
+                {selectedArea === 'recommended' && candidateArea ? (
+                  <UserCheck className="size-3.5" />
+                ) : (
+                  <Layers className="size-3.5" />
+                )}
+                {currentAreaLabel}
+                <ChevronDown className={cn('size-3.5 transition-transform duration-200', openDropdown === 'area' && 'rotate-180')} />
+              </button>
+
+              {openDropdown === 'area' && (
+                <div className="absolute left-0 sm:left-1/2 sm:-translate-x-1/2 top-full z-50 mt-2 min-w-[16rem] max-h-72 overflow-y-auto rounded-2xl border border-border bg-popover p-1.5 shadow-xl text-left animate-in fade-in zoom-in-95 duration-150">
+                  {areaOptions.map((opt) => (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => handleAreaChange(opt.value)}
+                      className={cn(
+                        'w-full rounded-xl px-3.5 py-2 text-xs font-semibold text-left transition-colors flex items-center justify-between',
+                        selectedArea === opt.value
+                          ? 'bg-primary text-primary-foreground font-bold'
+                          : 'text-foreground hover:bg-accent',
+                      )}
+                    >
+                      <span>{opt.label}</span>
+                      {selectedArea === opt.value && <div className="size-1.5 rounded-full bg-primary-foreground shrink-0 ml-2" />}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* 3. Data de publicação */}
+            <div className="relative">
+              <button
+                type="button"
+                className={cn(
+                  'h-9 rounded-full px-4 text-xs font-bold transition-all shadow-2xs border inline-flex items-center gap-1.5',
+                  publishedDate !== 'all'
+                    ? 'bg-primary text-primary-foreground border-primary hover:bg-primary/90'
+                    : 'border-border bg-card text-foreground hover:border-foreground/30 hover:bg-accent/40',
+                )}
+                aria-expanded={openDropdown === 'date'}
+                onClick={() => setOpenDropdown(openDropdown === 'date' ? null : 'date')}
+              >
+                <Clock className="size-3.5" />
+                {dateLabels[publishedDate]}
+                <ChevronDown className={cn('size-3.5 transition-transform duration-200', openDropdown === 'date' && 'rotate-180')} />
+              </button>
+
+              {openDropdown === 'date' && (
+                <div className="absolute right-0 sm:left-0 top-full z-50 mt-2 min-w-[13rem] rounded-2xl border border-border bg-popover p-1.5 shadow-xl text-left animate-in fade-in zoom-in-95 duration-150">
+                  {(['all', 'recent', 'month'] as DateFilter[]).map((date) => (
+                    <button
+                      key={date}
+                      type="button"
+                      onClick={() => handleDateChange(date)}
+                      className={cn(
+                        'w-full rounded-xl px-3.5 py-2 text-xs font-semibold text-left transition-colors flex items-center justify-between',
+                        publishedDate === date
+                          ? 'bg-primary text-primary-foreground font-bold'
+                          : 'text-foreground hover:bg-accent',
+                      )}
+                    >
+                      {date === 'all' ? 'Qualquer momento' : dateLabels[date]}
+                      {publishedDate === date && <div className="size-1.5 rounded-full bg-primary-foreground" />}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Clear Filters Button */}
+            {hasActiveFilters && (
+              <button
+                type="button"
+                onClick={handleResetFilters}
+                className="h-9 rounded-full px-3.5 text-xs font-semibold text-muted-foreground hover:text-foreground border border-dashed border-border/80 bg-card hover:bg-accent inline-flex items-center gap-1.5 transition-colors shadow-2xs"
+              >
+                <RotateCcw className="size-3" />
+                Limpar filtros
+              </button>
             )}
           </div>
-          <span className="text-xs font-semibold text-muted-foreground">
+        </div>
+      </section>
+
+      {/* MAIN CONTENT AREA */}
+      <main className="mx-auto max-w-7xl px-5 py-8 sm:px-8 lg:px-10 lg:py-10">
+        {/* Section Header: Title + Counter */}
+        <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-border/60 pb-4">
+          <div>
+            <h2 className="text-xl sm:text-2xl font-extrabold tracking-tight text-foreground">
+              {selectedArea === 'recommended' && candidateArea
+                ? `Vagas para você em ${candidateArea}`
+                : selectedArea !== 'all'
+                  ? `Vagas em ${selectedArea}`
+                  : 'Todas as vagas disponíveis'}
+            </h2>
+            <p className="text-xs text-muted-foreground mt-1">
+              {selectedArea === 'recommended' && candidateArea
+                ? 'Selecionadas e ordenadas para o seu perfil profissional.'
+                : 'Oportunidades em tempo real sincronizadas da plataforma InHire.'}
+            </p>
+          </div>
+          <span className="text-xs font-bold text-muted-foreground bg-card border border-border/80 rounded-full px-3 py-1.5 shadow-2xs w-fit">
             {loading ? 'Carregando…' : total ? `${total} oportunidades` : '0 oportunidades'}
           </span>
         </div>
@@ -237,10 +469,10 @@ export function JobsSearchPage() {
         {/* Jobs Grid (2 Columns on Desktop) */}
         {loading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {[1, 2, 3, 4].map((i) => (
+            {[1, 2, 3, 4, 5, 6].map((i) => (
               <div
                 key={i}
-                className="h-44 animate-pulse rounded-2xl border border-border bg-card/60 p-5"
+                className="h-48 animate-pulse rounded-2xl border border-border bg-card/60 p-5 shadow-xs"
               />
             ))}
           </div>
@@ -323,11 +555,16 @@ export function JobsSearchPage() {
           <div className="rounded-2xl border border-dashed border-border bg-card/60 p-12 text-center">
             <Search className="mx-auto size-8 text-muted-foreground/60" />
             <p className="mt-4 text-base font-extrabold text-foreground">Nenhuma oportunidade encontrada</p>
-            <p className="mt-2 text-sm text-muted-foreground">
-              {candidateArea
-                ? `Não encontramos vagas abertas no momento para a área "${candidateArea}". Você pode buscar em todas as áreas ou ajustar os termos.`
-                : 'Tente alterar os termos da busca ou selecionar outro filtro.'}
+            <p className="mt-2 text-sm text-muted-foreground max-w-md mx-auto">
+              {candidateArea && selectedArea === 'recommended'
+                ? `Não encontramos vagas abertas no momento para a área "${candidateArea}". Tente buscar em todas as áreas ou ajustar os filtros.`
+                : 'Tente alterar os termos da busca, limpar filtros ou pesquisar por outra localização.'}
             </p>
+            {hasActiveFilters && (
+              <Button variant="outline" size="sm" onClick={handleResetFilters} className="mt-5 rounded-full">
+                <RotateCcw className="mr-1.5 size-3.5" /> Limpar filtros e ver todas
+              </Button>
+            )}
           </div>
         )}
       </main>
