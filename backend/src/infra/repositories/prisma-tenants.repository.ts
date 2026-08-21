@@ -88,6 +88,7 @@ export class PrismaTenantsRepository implements ITenantsRepository {
     const where: Prisma.TenantWhereInput = {
       active: params.active,
       origin: params.origin,
+      jobs: params.active ? { some: { status: 'PUBLISHED' } } : undefined,
       ...(params.search
         ? {
             OR: [

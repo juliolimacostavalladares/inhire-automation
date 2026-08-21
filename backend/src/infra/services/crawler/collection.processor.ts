@@ -72,12 +72,17 @@ export class CollectionProcessor extends WorkerHost {
           totals.updated += result.updated;
           totals.closed += result.closed;
 
+          const openJobsCount = page.jobsPage?.filter(
+            (job) => job.jobId && (!job.status || job.status.toLowerCase() === 'published'),
+          ).length ?? 0;
+
           await this.prisma.$transaction([
             this.prisma.tenant.update({
               where: { id: tenant.id },
               data: {
                 name: page.tenantName || tenant.name,
                 ...(page.logo ? { logoUrl: page.logo } : {}),
+                active: openJobsCount > 0,
                 lastValidatedAt: new Date(),
                 lastCollectedAt: new Date(),
               },
