@@ -47,51 +47,16 @@ interface ApplicationFormProps {
   onToggleFavorite?: () => void
 }
 
-const FIELD_LABELS: Record<string, string> = {
-  name: 'Nome completo',
-  email: 'E-mail',
-  phone: 'WhatsApp / Telefone',
-  location: 'Cidade e Estado de Residência',
-  cep: 'CEP',
-  linkedinUsername: 'Perfil do LinkedIn',
-  referralEmail: 'Indicação de Colaborador (E-mail)',
-  salaryExpectation: 'Pretensão Salarial',
-  contractType: 'Tipo de Contrato',
-  workModel: 'Disponibilidade de Modelo de Trabalho',
-  curriculum: 'Currículo',
-}
-
-const FIELD_PLACEHOLDERS: Record<string, string> = {
-  name: 'Ex: Júlio Lima',
-  email: 'seu.email@exemplo.com',
-  phone: '(11) 99999-9999',
-  location: 'São Paulo, SP',
-  cep: '01001-000',
-  linkedinUsername: 'https://linkedin.com/in/seuperfil',
-  referralEmail: 'colega@empresa.com',
-  salaryExpectation: 'R$ 10.000,00',
-}
-
 const FIELD_ICONS: Record<string, ReactNode> = {
   name: <User className="size-4 text-muted-foreground" />,
   email: <Mail className="size-4 text-muted-foreground" />,
   phone: <Phone className="size-4 text-muted-foreground" />,
   location: <MapPin className="size-4 text-muted-foreground" />,
+  city: <MapPin className="size-4 text-muted-foreground" />,
   cep: <MapPin className="size-4 text-muted-foreground" />,
   linkedinUsername: <Globe className="size-4 text-muted-foreground" />,
-  referralEmail: <Mail className="size-4 text-muted-foreground" />,
   salaryExpectation: <DollarSign className="size-4 text-muted-foreground" />,
 }
-
-const CONTACT_FIELD_KEYS = new Set([
-  'name',
-  'email',
-  'phone',
-  'location',
-  'cep',
-  'linkedinUsername',
-  'referralEmail',
-])
 
 export function ApplicationFormWizard({
   jobId,
@@ -111,7 +76,11 @@ export function ApplicationFormWizard({
   const [tailoredResume, setTailoredResume] = useState<TailoredResume | null>(null)
 
   // Dynamic values stored by field key and question ID
-  const [values, setValues] = useState<Record<string, string>>({})
+  const [values, setValues] = useState<Record<string, string>>({
+    country: 'Brasil',
+    workModel: 'Sim',
+    hasReferral: 'Não',
+  })
   const [resumeType, setResumeType] = useState<'TAILORED' | 'PROFILE'>('TAILORED')
   const [coverNote, setCoverNote] = useState('')
   const [privacyPolicyAccepted, setPrivacyPolicyAccepted] = useState(true)
@@ -175,44 +144,21 @@ export function ApplicationFormWizard({
         if (!next.contractType && profile.contractTypes && profile.contractTypes.length > 0) {
           next.contractType = profile.contractTypes[0]
         }
-        if (!next.workModel && profile.workModalities && profile.workModalities.length > 0) {
-          next.workModel = profile.workModalities[0]
-        }
       }
       return next
     })
   }, [user, profile])
 
-  // Split dynamic fields from backend
-  const { contactFields, jobFields } = useMemo(() => {
+  // Ordered fields from backend
+  const dynamicFields = useMemo(() => {
     const fields = formStructure?.fields ?? [
-      { key: 'name', label: 'Nome completo', type: 'text', required: true, options: [] },
-      { key: 'email', label: 'E-mail', type: 'email', required: true, options: [] },
-      { key: 'phone', label: 'WhatsApp / Telefone', type: 'tel', required: true, options: [] },
-      { key: 'privacyPolicyAccepted', label: 'Termos de Privacidade', type: 'boolean', required: true, options: [] },
+      { key: 'name', label: 'Nome completo', placeholder: 'Seu nome completo', type: 'text', required: true, options: [] },
+      { key: 'email', label: 'Seu melhor email', placeholder: 'Seu melhor email', type: 'email', required: true, options: [] },
+      { key: 'phone', label: 'Celular com DDD', placeholder: '(00) 00000-0000', helpText: '+55', type: 'tel', required: true, options: [] },
+      { key: 'privacyPolicyAccepted', label: 'Ao fornecer seus dados pessoais, você concorda com o que está descrito nesta Política de Privacidade.', type: 'boolean', required: true, options: [] },
     ]
 
-    const contact: ApplicationFormField[] = []
-    const job: ApplicationFormField[] = []
-
-    for (const field of fields) {
-      if (field.key === 'curriculum' || field.key === 'privacyPolicyAccepted') {
-        continue
-      }
-      if (CONTACT_FIELD_KEYS.has(field.key)) {
-        contact.push(field)
-      } else {
-        job.push(field)
-      }
-    }
-
-    // Ensure base contact fields are present
-    const keysPresent = new Set(contact.map((f) => f.key))
-    if (!keysPresent.has('name')) contact.unshift({ key: 'name', label: 'Nome completo', type: 'text', required: true, options: [] })
-    if (!keysPresent.has('email')) contact.splice(1, 0, { key: 'email', label: 'E-mail', type: 'email', required: true, options: [] })
-    if (!keysPresent.has('phone')) contact.splice(2, 0, { key: 'phone', label: 'WhatsApp / Telefone', type: 'tel', required: true, options: [] })
-
-    return { contactFields: contact, jobFields: job }
+    return fields.filter((f) => f.key !== 'privacyPolicyAccepted' && f.key !== 'curriculum')
   }, [formStructure])
 
   // Diversity & custom vacancy questions from backend
@@ -247,19 +193,19 @@ export function ApplicationFormWizard({
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {}
 
-    for (const field of contactFields) {
+    for (const field of dynamicFields) {
+      if (field.key === 'referral') {
+        if (values.hasReferral === 'Sim' && !(values.referralEmail || '').trim()) {
+          newErrors.referralEmail = 'Informe o e-mail ou nome de quem indicou você'
+        }
+        continue
+      }
+
       const val = (values[field.key] || '').trim()
       if (field.required && !val) {
-        newErrors[field.key] = `${field.label || FIELD_LABELS[field.key] || 'Este campo'} é obrigatório`
+        newErrors[field.key] = `${field.label || 'Este campo'} é obrigatório`
       } else if (field.key === 'email' && val && !val.includes('@')) {
         newErrors.email = 'E-mail inválido'
-      }
-    }
-
-    for (const field of jobFields) {
-      const val = (values[field.key] || '').trim()
-      if (field.required && !val) {
-        newErrors[field.key] = `${field.label || FIELD_LABELS[field.key] || 'Este campo'} é obrigatório`
       }
     }
 
@@ -271,7 +217,7 @@ export function ApplicationFormWizard({
     }
 
     if (!privacyPolicyAccepted) {
-      newErrors.privacy = 'Você precisa aceitar os termos de privacidade para se candidatar'
+      newErrors.privacy = 'Você precisa concordar com os termos de privacidade para continuar'
     }
 
     setErrors(newErrors)
@@ -302,7 +248,11 @@ export function ApplicationFormWizard({
         workModel: values.workModel || undefined,
         coverNote: coverNote.trim() || undefined,
         resumeType,
-        answers: Object.keys(questionAnswers).length > 0 ? questionAnswers : undefined,
+        answers: {
+          ...questionAnswers,
+          ...(values.country ? { country: values.country } : {}),
+          ...(values.hasReferral === 'Sim' ? { referral: values.referralEmail } : {}),
+        },
         privacyPolicyAccepted,
       }
 
@@ -323,87 +273,127 @@ export function ApplicationFormWizard({
     setTimeout(() => setCopiedLink(false), 2000)
   }
 
-  // Render a single dynamic form field
-  const renderDynamicField = (field: ApplicationFormField) => {
+  // Render a single dynamic form field matching InHire's exact logic and design
+  const renderField = (field: ApplicationFormField) => {
     const val = values[field.key] || ''
-    const label = field.label || FIELD_LABELS[field.key] || field.key
-    const placeholder = field.placeholder || FIELD_PLACEHOLDERS[field.key] || `Informe ${label.toLowerCase()}`
+    const label = field.label || field.key
+    const placeholder = field.placeholder || `Informe ${label.toLowerCase()}`
     const icon = FIELD_ICONS[field.key]
     const hasError = Boolean(errors[field.key])
 
-    if (field.type === 'select' && field.options.length > 0) {
+    // 1. Work Model (Disponibilidade para trabalhar no modelo da vaga: Sim / Não)
+    if (field.key === 'workModel' || (field.type === 'boolean' && field.options?.includes('Sim'))) {
+      const currentChoice = values.workModel || 'Sim'
       return (
-        <div key={field.key}>
-          <Label className="text-xs font-bold text-foreground">
+        <div key={field.key} className="space-y-1.5">
+          <Label className="text-xs font-bold text-foreground leading-snug">
             {label} {field.required && <span className="text-destructive">*</span>}
           </Label>
-          {field.helpText && (
-            <p className="text-[11px] text-muted-foreground mt-0.5 mb-1 leading-normal">
-              {field.helpText}
-            </p>
+          <div className="grid grid-cols-2 gap-2 pt-0.5">
+            {(['Sim', 'Não'] as const).map((opt) => (
+              <button
+                key={opt}
+                type="button"
+                onClick={() => handleFieldChange('workModel', opt)}
+                className={cn(
+                  'h-10 rounded-xl border text-xs font-bold transition-all text-center',
+                  currentChoice === opt
+                    ? 'border-primary bg-primary text-primary-foreground font-black shadow-2xs'
+                    : 'border-border bg-background text-foreground hover:bg-accent',
+                )}
+              >
+                {opt}
+              </button>
+            ))}
+          </div>
+          {hasError && <p className="text-[11px] text-destructive font-semibold">{errors[field.key]}</p>}
+        </div>
+      )
+    }
+
+    // 2. Referral (Você foi indicado por alguém da empresa?: Não / Sim)
+    if (field.key === 'referral' || field.type === 'referral') {
+      const hasReferral = values.hasReferral || 'Não'
+      return (
+        <div key={field.key} className="space-y-2">
+          <Label className="text-xs font-bold text-foreground leading-snug">
+            {label} {field.required && <span className="text-destructive">*</span>}
+          </Label>
+          <div className="grid grid-cols-2 gap-2">
+            {(['Não', 'Sim'] as const).map((opt) => (
+              <button
+                key={opt}
+                type="button"
+                onClick={() => handleFieldChange('hasReferral', opt)}
+                className={cn(
+                  'h-10 rounded-xl border text-xs font-bold transition-all text-center',
+                  hasReferral === opt
+                    ? 'border-primary bg-primary text-primary-foreground font-black shadow-2xs'
+                    : 'border-border bg-background text-foreground hover:bg-accent',
+                )}
+              >
+                {opt}
+              </button>
+            ))}
+          </div>
+
+          {hasReferral === 'Sim' && (
+            <div className="pt-1 animate-in fade-in duration-150">
+              <Input
+                id="referral-email-input"
+                type="text"
+                value={values.referralEmail || ''}
+                onChange={(e) => handleFieldChange('referralEmail', e.target.value)}
+                placeholder="E-mail ou nome de quem indicou você"
+                invalid={Boolean(errors.referralEmail)}
+                className="h-11 text-xs rounded-xl bg-background border-input focus-within:border-primary"
+              />
+              {errors.referralEmail && (
+                <p className="mt-1 text-[11px] text-destructive font-semibold">{errors.referralEmail}</p>
+              )}
+            </div>
           )}
+        </div>
+      )
+    }
+
+    // 3. Select fields (País de origem, Tipo de contrato, etc.)
+    if (field.type === 'select' && field.options.length > 0) {
+      return (
+        <div key={field.key} className="space-y-1">
+          <Label htmlFor={`app-field-${field.key}`} className="text-xs font-bold text-foreground">
+            {label} {field.required && <span className="text-destructive">*</span>}
+          </Label>
           <select
-            value={val}
+            id={`app-field-${field.key}`}
+            value={val || (field.key === 'country' ? 'Brasil' : '')}
             onChange={(e) => handleFieldChange(field.key, e.target.value)}
-            className="mt-1 h-11 w-full rounded-xl border border-input bg-background px-3 text-xs font-medium text-foreground outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-ring/25"
+            className="h-11 w-full rounded-xl border border-input bg-background px-3 text-xs font-medium text-foreground outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-ring/25"
           >
-            <option value="">Selecione…</option>
+            <option value="">{placeholder}</option>
             {field.options.map((opt) => (
               <option key={opt} value={opt}>
                 {opt}
               </option>
             ))}
           </select>
-          {hasError && <p className="mt-1 text-[11px] text-destructive font-semibold">{errors[field.key]}</p>}
+          {hasError && <p className="text-[11px] text-destructive font-semibold">{errors[field.key]}</p>}
         </div>
       )
     }
 
-    if (field.key === 'workModel' || (field.type === 'boolean' && field.key.toLowerCase().includes('model'))) {
-      const currentModel = val || 'Remoto'
-      return (
-        <div key={field.key}>
-          <Label className="text-xs font-bold text-foreground">
-            {label} {field.required && <span className="text-destructive">*</span>}
-          </Label>
-          {field.helpText && (
-            <p className="text-[11px] text-muted-foreground mt-0.5 mb-1 leading-normal">
-              {field.helpText}
-            </p>
-          )}
-          <div className="mt-1.5 grid grid-cols-3 gap-2">
-            {(['Remoto', 'Híbrido', 'Presencial'] as const).map((model) => (
-              <button
-                key={model}
-                type="button"
-                onClick={() => handleFieldChange(field.key, model)}
-                className={cn(
-                  'h-9 rounded-xl border text-xs font-bold transition-all text-center',
-                  currentModel === model
-                    ? 'border-primary bg-primary text-primary-foreground font-black shadow-2xs'
-                    : 'border-border bg-background text-foreground hover:bg-accent',
-                )}
-              >
-                {model}
-              </button>
-            ))}
-          </div>
-          {hasError && <p className="mt-1 text-[11px] text-destructive font-semibold">{errors[field.key]}</p>}
-        </div>
-      )
-    }
-
+    // 4. Standard Text / Email / Phone / URL / Currency Inputs
     return (
-      <div key={field.key}>
+      <div key={field.key} className="space-y-1">
         <Label htmlFor={`app-field-${field.key}`} className="text-xs font-bold text-foreground">
           {label} {field.required && <span className="text-destructive">*</span>}
         </Label>
         {field.helpText && (
-          <p className="text-[11px] text-muted-foreground mt-0.5 mb-1 leading-normal">
+          <p className="text-[11px] text-muted-foreground leading-normal">
             {field.helpText}
           </p>
         )}
-        <div className="mt-1">
+        <div className="relative">
           <Input
             id={`app-field-${field.key}`}
             type={field.type === 'email' ? 'email' : field.type === 'tel' ? 'tel' : 'text'}
@@ -415,7 +405,7 @@ export function ApplicationFormWizard({
             className="h-11 text-xs rounded-xl bg-background border-input focus-within:border-primary"
           />
         </div>
-        {hasError && <p className="mt-1 text-[11px] text-destructive font-semibold">{errors[field.key]}</p>}
+        {hasError && <p className="text-[11px] text-destructive font-semibold">{errors[field.key]}</p>}
       </div>
     )
   }
@@ -426,17 +416,17 @@ export function ApplicationFormWizard({
     const hasError = Boolean(errors[q.id])
 
     return (
-      <div key={q.id}>
-        <Label className="text-xs font-bold text-foreground">
+      <div key={q.id} className="space-y-1">
+        <Label className="text-xs font-bold text-foreground leading-snug">
           {q.question || q.title} {q.required && <span className="text-destructive">*</span>}
         </Label>
-        {q.subTitle && <p className="text-[11px] text-muted-foreground mb-1">{q.subTitle}</p>}
+        {q.subTitle && <p className="text-[11px] text-muted-foreground leading-normal">{q.subTitle}</p>}
 
         {q.options && q.options.length > 0 ? (
           <select
             value={val}
             onChange={(e) => handleFieldChange(q.id, e.target.value)}
-            className="mt-1.5 h-10 w-full rounded-xl border border-input bg-background px-3 text-xs text-foreground outline-none focus:border-primary"
+            className="h-10 w-full rounded-xl border border-input bg-background px-3 text-xs text-foreground outline-none focus:border-primary"
           >
             <option value="">Selecione uma opção</option>
             {q.options.map((opt) => (
@@ -451,7 +441,7 @@ export function ApplicationFormWizard({
             onChange={(e) => handleFieldChange(q.id, e.target.value)}
             placeholder={q.placeholder || 'Sua resposta…'}
             rows={2}
-            className="mt-1.5 w-full rounded-xl border border-input bg-background p-2.5 text-xs text-foreground placeholder:text-muted-foreground outline-none focus:border-primary resize-none"
+            className="w-full rounded-xl border border-input bg-background p-2.5 text-xs text-foreground placeholder:text-muted-foreground outline-none focus:border-primary resize-none"
           />
         ) : (
           <Input
@@ -459,10 +449,10 @@ export function ApplicationFormWizard({
             onChange={(e) => handleFieldChange(q.id, e.target.value)}
             placeholder={q.placeholder || 'Sua resposta…'}
             invalid={hasError}
-            className="mt-1.5 h-10 text-xs rounded-xl bg-background"
+            className="h-10 text-xs rounded-xl bg-background"
           />
         )}
-        {hasError && <p className="mt-1 text-[11px] text-destructive font-semibold">{errors[q.id]}</p>}
+        {hasError && <p className="text-[11px] text-destructive font-semibold">{errors[q.id]}</p>}
       </div>
     )
   }
@@ -547,7 +537,7 @@ export function ApplicationFormWizard({
     )
   }
 
-  // MAIN UNIFIED APPLICATION FORM
+  // MAIN UNIFIED APPLICATION FORM (MATCHING INHIRE SITE)
   return (
     <Card className="overflow-hidden border border-border bg-card shadow-sm transition-all rounded-2xl">
       {/* Form Header */}
@@ -578,7 +568,7 @@ export function ApplicationFormWizard({
       </div>
 
       {/* Form Body */}
-      <form onSubmit={handleSubmit} className="p-5 space-y-5">
+      <form onSubmit={handleSubmit} className="p-5 space-y-4">
         {submitError && (
           <div
             role="alert"
@@ -589,69 +579,16 @@ export function ApplicationFormWizard({
           </div>
         )}
 
-        {/* 1. SEÇÃO: DADOS PESSOAIS & CONTATO */}
-        <div className="space-y-3.5">
-          <div className="flex items-center gap-2 pb-1 border-b border-border/60">
-            <User className="size-3.5 text-primary" />
-            <h4 className="text-xs font-black uppercase tracking-wider text-foreground">
-              Informações Pessoais
-            </h4>
-          </div>
+        {/* Dynamic Fields in Exact InHire Order */}
+        {dynamicFields.map(renderField)}
 
-          <div className="space-y-3">
-            {contactFields.map(renderDynamicField)}
-          </div>
-        </div>
+        {/* Currículo Section */}
+        <div className="space-y-2 pt-1">
+          <Label className="text-xs font-bold text-foreground leading-snug">
+            Currículo <span className="text-destructive">*</span>
+          </Label>
 
-        {/* 2. SEÇÃO: EXPECTATIVAS & CONDIÇÕES DA VAGA */}
-        {jobFields.length > 0 && (
-          <div className="space-y-3.5 pt-1">
-            <div className="flex items-center gap-2 pb-1 border-b border-border/60">
-              <DollarSign className="size-3.5 text-primary" />
-              <h4 className="text-xs font-black uppercase tracking-wider text-foreground">
-                Condições & Expectativas
-              </h4>
-            </div>
-
-            <div className="space-y-3">
-              {jobFields.map(renderDynamicField)}
-            </div>
-          </div>
-        )}
-
-        {/* 3. SEÇÃO: PERGUNTAS ESPECÍFICAS DA VAGA & DIVERSIDADE */}
-        {visibleQuestions.length > 0 && (
-          <div className="space-y-3.5 pt-1">
-            <div className="flex items-center gap-2 pb-1 border-b border-border/60">
-              <Sparkles className="size-3.5 text-primary" />
-              <h4 className="text-xs font-black uppercase tracking-wider text-foreground">
-                Perguntas da Vaga
-              </h4>
-            </div>
-
-            {formStructure?.diversityIntroductionHtml && (
-              <div
-                className="rounded-xl border border-border bg-accent/10 p-3 text-xs text-muted-foreground leading-relaxed"
-                dangerouslySetInnerHTML={{ __html: formStructure.diversityIntroductionHtml }}
-              />
-            )}
-
-            <div className="space-y-3">
-              {visibleQuestions.map(renderDynamicQuestion)}
-            </div>
-          </div>
-        )}
-
-        {/* 4. SEÇÃO: CURRÍCULO */}
-        <div className="space-y-3.5 pt-1">
-          <div className="flex items-center gap-2 pb-1 border-b border-border/60">
-            <FileText className="size-3.5 text-primary" />
-            <h4 className="text-xs font-black uppercase tracking-wider text-foreground">
-              Currículo
-            </h4>
-          </div>
-
-          <div className="space-y-2.5">
+          <div className="space-y-2">
             {/* Tailored Resume Option */}
             <div
               role="button"
@@ -682,7 +619,7 @@ export function ApplicationFormWizard({
                   )}
                 </div>
                 <p className="text-[11px] text-muted-foreground mt-1 leading-relaxed">
-                  Otimizado com palavras-chave e compatibilidade ATS para {jobTitle}.
+                  Otimizado com palavras-chave e compatibilidade ATS para esta vaga.
                 </p>
               </div>
             </div>
@@ -713,8 +650,21 @@ export function ApplicationFormWizard({
           </div>
         </div>
 
-        {/* 5. SEÇÃO: APRESENTAÇÃO (OPCIONAL) */}
-        <div className="pt-1">
+        {/* Diversity Questions (if configured on vacancy) */}
+        {visibleQuestions.length > 0 && (
+          <div className="space-y-3 pt-2">
+            {formStructure?.diversityIntroductionHtml && (
+              <div
+                className="rounded-xl border border-border bg-accent/10 p-3 text-xs text-muted-foreground leading-relaxed"
+                dangerouslySetInnerHTML={{ __html: formStructure.diversityIntroductionHtml }}
+              />
+            )}
+            {visibleQuestions.map(renderDynamicQuestion)}
+          </div>
+        )}
+
+        {/* Optional Cover Note */}
+        <div className="space-y-1 pt-1">
           <Label htmlFor="applicant-cover-note" className="text-xs font-bold text-foreground">
             Mensagem de Apresentação (Opcional)
           </Label>
@@ -724,11 +674,11 @@ export function ApplicationFormWizard({
             onChange={(e) => setCoverNote(e.target.value)}
             placeholder="Destaque seus pontos fortes e por que tem interesse nesta oportunidade…"
             rows={3}
-            className="mt-1.5 w-full rounded-xl border border-input bg-background p-3 text-xs text-foreground placeholder:text-muted-foreground outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-ring/25 resize-none"
+            className="w-full rounded-xl border border-input bg-background p-3 text-xs text-foreground placeholder:text-muted-foreground outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-ring/25 resize-none"
           />
         </div>
 
-        {/* 6. SEÇÃO: PRIVACIDADE & LGPD */}
+        {/* Privacy Policy Disclaimer & Consent */}
         <div className="rounded-2xl border border-border bg-accent/15 p-3.5">
           <label className="flex items-start gap-2.5 cursor-pointer text-left">
             <input
@@ -738,8 +688,7 @@ export function ApplicationFormWizard({
               className="mt-0.5 size-4 rounded accent-primary text-primary focus:ring-primary"
             />
             <span className="text-[11px] leading-relaxed text-muted-foreground">
-              Concordo com o compartilhamento e tratamento dos meus dados pessoais para o processo seletivo da vaga em{' '}
-              <strong className="text-foreground">{company}</strong> de acordo com a LGPD e{' '}
+              Ao fornecer seus dados pessoais, você concorda com o que está descrito nesta{' '}
               {formStructure?.privacyPolicyUrl ? (
                 <a
                   href={formStructure.privacyPolicyUrl}
@@ -747,18 +696,18 @@ export function ApplicationFormWizard({
                   rel="noreferrer"
                   className="text-primary underline font-bold"
                 >
-                  política de privacidade da vaga
+                  Política de Privacidade
                 </a>
               ) : (
-                'termos da InHire'
+                'Política de Privacidade'
               )}
               .
             </span>
           </label>
-          {errors.privacy && <p className="mt-1.5 text-[11px] text-destructive font-semibold">{errors.privacy}</p>}
+          {errors.privacy && <p className="mt-1 text-[11px] text-destructive font-semibold">{errors.privacy}</p>}
         </div>
 
-        {/* SUBMIT BUTTON */}
+        {/* Submit Button */}
         <Button
           type="submit"
           disabled={submitting}
@@ -766,17 +715,17 @@ export function ApplicationFormWizard({
         >
           {submitting ? (
             <>
-              <Loader2 className="size-4 animate-spin" /> Enviando Candidatura…
+              <Loader2 className="size-4 animate-spin" /> Enviando Inscrição…
             </>
           ) : (
             <>
-              <Send className="size-4" /> Enviar Candidatura
+              <Send className="size-4" /> Continuar inscrição
             </>
           )}
         </Button>
       </form>
 
-      {/* Footer Disclaimer */}
+      {/* Footer */}
       <div className="border-t border-border bg-accent/10 px-5 py-3 text-center">
         <p className="flex items-center justify-center gap-1.5 text-[10px] font-bold text-muted-foreground">
           <ShieldCheck className="size-3.5 text-primary" /> Candidatura direta e integrada via InHire Hub
