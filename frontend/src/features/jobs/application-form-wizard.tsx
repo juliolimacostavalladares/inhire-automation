@@ -21,6 +21,9 @@ import {
   Calendar,
   Hash,
   Upload,
+  ArrowLeft,
+  ArrowRight,
+  HeartHandshake,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -112,6 +115,8 @@ const KNOWN_FIELD_PLACEHOLDERS: Record<string, string> = {
   salaryExpectation: 'R$ 0.000,00',
 }
 
+type FormStage = 'APPLICATION' | 'DIVERSITY'
+
 export function ApplicationFormWizard({
   jobId,
   jobTitle,
@@ -130,6 +135,9 @@ export function ApplicationFormWizard({
     initialFormStructure ?? null,
   )
   const [tailoredResume, setTailoredResume] = useState<TailoredResume | null>(null)
+
+  // Stage: 1 = Application Form, 2 = Inclusion & Diversity Form
+  const [currentStage, setCurrentStage] = useState<FormStage>('APPLICATION')
 
   // Form field values (handles text, single values, and comma-separated arrays for multiple-choice)
   const [values, setValues] = useState<Record<string, string>>({
@@ -216,7 +224,7 @@ export function ApplicationFormWizard({
     return null
   }, [contractTypeOptions])
 
-  // Normalized dynamic fields from backend
+  // Normalized dynamic application fields
   const dynamicFields = useMemo(() => {
     const rawFields = formStructure?.fields ?? [
       { key: 'name', type: 'text', required: true, options: [] },
@@ -361,7 +369,7 @@ export function ApplicationFormWizard({
       })
     }
 
-    // 10. All other possible dynamic fields (portfolio, github, website, cpf, rg, birthDate, gender, etc.)
+    // 10. All other possible dynamic application fields
     for (const f of rawFields) {
       if (
         [
@@ -403,8 +411,8 @@ export function ApplicationFormWizard({
     return result
   }, [formStructure, workplace, jobLocation, singleContractType, contractTypeOptions])
 
-  // Diversity & custom vacancy questions from backend
-  const visibleQuestions = useMemo(() => {
+  // Diversity & Inclusion Questions from backend
+  const visibleDiversityQuestions = useMemo(() => {
     const questions = formStructure?.diversityQuestions ?? []
     return questions.filter((q) => {
       if (!q.dependsOnQuestionId) return true
@@ -423,6 +431,8 @@ export function ApplicationFormWizard({
       })
     })
   }, [formStructure, values])
+
+  const hasDiversityForm = visibleDiversityQuestions.length > 0 || Boolean(formStructure?.diversityIntroductionHtml)
 
   // Field change handler
   const handleFieldChange = (key: string, val: string) => {
@@ -458,8 +468,8 @@ export function ApplicationFormWizard({
     }
   }
 
-  // Form Validation
-  const validateForm = (): boolean => {
+  // Validate Application Form (Form 1)
+  const validateApplicationForm = (): boolean => {
     const newErrors: Record<string, string> = {}
 
     for (const field of dynamicFields) {
@@ -478,13 +488,6 @@ export function ApplicationFormWizard({
       }
     }
 
-    for (const q of visibleQuestions) {
-      const val = (values[q.id] || '').trim()
-      if (q.required && !val) {
-        newErrors[q.id] = 'Esta pergunta é obrigatória'
-      }
-    }
-
     if (!privacyPolicyAccepted) {
       newErrors.privacy = 'Você precisa concordar com a política de privacidade para continuar'
     }
@@ -493,16 +496,48 @@ export function ApplicationFormWizard({
     return Object.keys(newErrors).length === 0
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!validateForm()) return
+  // Validate Diversity Form (Form 2)
+  const validateDiversityForm = (): boolean => {
+    const newErrors: Record<string, string> = {}
 
+    for (const q of visibleDiversityQuestions) {
+      const val = (values[q.id] || '').trim()
+      if (q.required && !val) {
+        newErrors[q.id] = 'Esta pergunta é obrigatória'
+      }
+    }
+
+    setErrors(newErrors)
+    return Object.keys(newErrors).length === 0
+  }
+
+  // Handle Next or Submit
+  const handleApplicationFormNext = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!validateApplicationForm()) return
+
+    if (hasDiversityForm) {
+      setCurrentStage('DIVERSITY')
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+    } else {
+      void submitApplication()
+    }
+  }
+
+  const handleDiversityFormSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!validateDiversityForm()) return
+    void submitApplication()
+  }
+
+  // Final application submission
+  const submitApplication = async () => {
     setSubmitting(true)
     setSubmitError(null)
 
     try {
       const questionAnswers: Record<string, string> = {}
-      for (const q of visibleQuestions) {
+      for (const q of visibleDiversityQuestions) {
         if (values[q.id]) questionAnswers[q.id] = values[q.id]
       }
 
@@ -731,7 +766,7 @@ export function ApplicationFormWizard({
     )
   }
 
-  // Render a dynamic question supporting singleChoice, multipleChoice, shortText, longText, fileUpload, and date
+  // Render a dynamic diversity question
   const renderDynamicQuestion = (q: DiversityQuestion) => {
     const val = values[q.id] || ''
     const hasError = Boolean(errors[q.id])
@@ -954,10 +989,112 @@ export function ApplicationFormWizard({
     )
   }
 
-  // MAIN UNIFIED APPLICATION FORM (MATCHING INHIRE SITE)
+  // ----------------------------------------------------
+  // FORM 2: INCLUSÃO & DIVERSIDADE
+  // ----------------------------------------------------
+  if (currentStage === 'DIVERSITY') {
+    return (
+      <Card className="overflow-hidden border border-border bg-card shadow-sm transition-all rounded-2xl animate-in slide-in-from-right-4 duration-200">
+        {/* Header */}
+        <div className="border-b border-border bg-accent/15 p-5">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <span className="flex size-6 items-center justify-center rounded-md bg-primary text-primary-foreground font-black text-xs shadow-2xs">
+                <HeartHandshake className="size-3.5" />
+              </span>
+              <span className="text-[10px] font-extrabold tracking-wider uppercase text-foreground">
+                INCLUSÃO & DIVERSIDADE
+              </span>
+            </div>
+
+            <span className="inline-flex items-center rounded-full border border-primary/30 bg-primary/10 px-2.5 py-0.5 text-[10px] font-black text-primary">
+              Etapa 2 de 2
+            </span>
+          </div>
+
+          <div className="mt-3">
+            <h3 className="text-base font-extrabold tracking-tight text-foreground">
+              Inclusão & Diversidade
+            </h3>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Perguntas para promover a diversidade e igualdade no processo da <strong>{company}</strong>.
+            </p>
+          </div>
+        </div>
+
+        {/* Diversity Form Body */}
+        <form onSubmit={handleDiversityFormSubmit} className="p-5 space-y-4">
+          {submitError && (
+            <div
+              role="alert"
+              className="rounded-xl border border-destructive/40 bg-destructive/10 p-3 text-xs font-semibold text-destructive flex items-start gap-2"
+            >
+              <AlertCircle className="size-4 shrink-0 mt-0.5" />
+              <span>{submitError}</span>
+            </div>
+          )}
+
+          {formStructure?.diversityIntroductionHtml && (
+            <div
+              className="rounded-xl border border-border bg-accent/10 p-3.5 text-xs text-muted-foreground leading-relaxed"
+              dangerouslySetInnerHTML={{ __html: formStructure.diversityIntroductionHtml }}
+            />
+          )}
+
+          {/* Diversity Questions */}
+          <div className="space-y-4">
+            {visibleDiversityQuestions.map(renderDynamicQuestion)}
+          </div>
+
+          {/* Action Buttons */}
+          <div className="space-y-2 pt-2">
+            <Button
+              type="submit"
+              disabled={submitting}
+              className="w-full h-12 rounded-xl text-sm font-black gap-2 bg-primary text-primary-foreground hover:bg-primary/90 shadow-2xs transition-all"
+            >
+              {submitting ? (
+                <>
+                  <Loader2 className="size-4 animate-spin" /> Enviando Candidatura…
+                </>
+              ) : (
+                <>
+                  <Send className="size-4" /> Finalizar Inscrição
+                </>
+              )}
+            </Button>
+
+            <Button
+              type="button"
+              variant="outline"
+              disabled={submitting}
+              onClick={() => {
+                setCurrentStage('APPLICATION')
+                window.scrollTo({ top: 0, behavior: 'smooth' })
+              }}
+              className="w-full h-10 rounded-xl text-xs font-bold gap-1.5 border-border bg-background hover:bg-accent text-muted-foreground hover:text-foreground"
+            >
+              <ArrowLeft className="size-3.5" /> Voltar para Dados da Inscrição
+            </Button>
+          </div>
+        </form>
+
+        {/* Footer */}
+        <div className="border-t border-border bg-accent/10 px-5 py-3 text-center">
+          <p className="flex items-center justify-center gap-1.5 text-[10px] font-bold text-muted-foreground">
+            <ShieldCheck className="size-3.5 text-primary" /> Candidatura direta e integrada via InHire Hub
+          </p>
+        </div>
+      </Card>
+    )
+  }
+
+  // ----------------------------------------------------
+  // FORM 1: FORMULÁRIO DE INSCRIÇÃO
+  // ----------------------------------------------------
   return (
-    <Card className="overflow-hidden border border-border bg-card shadow-sm transition-all rounded-2xl">
-      {/* Form Header */}
+    <Card className="overflow-hidden border border-border bg-card shadow-sm transition-all rounded-2xl animate-in slide-in-from-left-4 duration-200">
+      {/* Header */}
       <div className="border-b border-border bg-accent/15 p-5">
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
@@ -970,7 +1107,7 @@ export function ApplicationFormWizard({
           </div>
 
           <span className="inline-flex items-center rounded-full border border-primary/30 bg-primary/10 px-2.5 py-0.5 text-[10px] font-black text-primary">
-            InHire Hub
+            {hasDiversityForm ? 'Etapa 1 de 2' : 'Inscrição'}
           </span>
         </div>
 
@@ -984,8 +1121,8 @@ export function ApplicationFormWizard({
         </div>
       </div>
 
-      {/* Form Body */}
-      <form onSubmit={handleSubmit} className="p-5 space-y-4">
+      {/* Application Form Body */}
+      <form onSubmit={handleApplicationFormNext} className="p-5 space-y-4">
         {submitError && (
           <div
             role="alert"
@@ -1067,19 +1204,6 @@ export function ApplicationFormWizard({
           </div>
         </div>
 
-        {/* Diversity Questions (if configured on vacancy) */}
-        {visibleQuestions.length > 0 && (
-          <div className="space-y-3 pt-2">
-            {formStructure?.diversityIntroductionHtml && (
-              <div
-                className="rounded-xl border border-border bg-accent/10 p-3 text-xs text-muted-foreground leading-relaxed"
-                dangerouslySetInnerHTML={{ __html: formStructure.diversityIntroductionHtml }}
-              />
-            )}
-            {visibleQuestions.map(renderDynamicQuestion)}
-          </div>
-        )}
-
         {/* Optional Cover Note */}
         <div className="space-y-1 pt-1">
           <Label htmlFor="applicant-cover-note" className="text-xs font-bold text-foreground">
@@ -1124,7 +1248,7 @@ export function ApplicationFormWizard({
           {errors.privacy && <p className="mt-1 text-[11px] text-destructive font-semibold">{errors.privacy}</p>}
         </div>
 
-        {/* Submit Button */}
+        {/* Submit / Next Button */}
         <Button
           type="submit"
           disabled={submitting}
@@ -1133,6 +1257,10 @@ export function ApplicationFormWizard({
           {submitting ? (
             <>
               <Loader2 className="size-4 animate-spin" /> Enviando Inscrição…
+            </>
+          ) : hasDiversityForm ? (
+            <>
+              Continuar inscrição <ArrowRight className="size-4" />
             </>
           ) : (
             <>
