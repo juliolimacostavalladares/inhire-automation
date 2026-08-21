@@ -4,59 +4,182 @@ import {
 } from "../providers/inhire/inhire.types";
 import { sanitizeJobDescription } from "./job-description.util";
 
-type FormField = {
+export interface IApplicationFormField {
   key: string;
+  label: string;
   type: string;
+  placeholder?: string;
+  helpText?: string;
   required: boolean;
   options: string[];
-};
+}
 
-const FIELD_TYPES: Record<string, { key: string; type: string }> = {
-  linkedin: { key: "linkedinUsername", type: "url" },
-  salary: { key: "salaryExpectation", type: "currency" },
-  curriculum: { key: "curriculum", type: "file" },
-  workModel: { key: "workModel", type: "boolean" },
-  location: { key: "location", type: "text" },
-  cep: { key: "cep", type: "text" },
-  referral: { key: "referralEmail", type: "email" },
+const FIELD_METADATA: Record<
+  string,
+  { key: string; label: string; type: string; placeholder: string; helpText?: string }
+> = {
+  linkedin: {
+    key: "linkedinUsername",
+    label: "Perfil do LinkedIn",
+    type: "url",
+    placeholder: "https://linkedin.com/in/seuperfil",
+    helpText: "Cole o link completo do seu perfil no LinkedIn",
+  },
+  salary: {
+    key: "salaryExpectation",
+    label: "Pretensão Salarial",
+    type: "currency",
+    placeholder: "R$ 0,00",
+    helpText: "Informe sua pretensão salarial mensal bruta",
+  },
+  curriculum: {
+    key: "curriculum",
+    label: "Currículo",
+    type: "file",
+    placeholder: "Anexe seu currículo em PDF",
+    helpText: "Envie seu currículo atualizado ou use o currículo ATS gerado",
+  },
+  workModel: {
+    key: "workModel",
+    label: "Disponibilidade de Modelo de Trabalho",
+    type: "boolean",
+    placeholder: "",
+    helpText: "Confirme sua disponibilidade para o modelo de trabalho desta vaga",
+  },
+  location: {
+    key: "location",
+    label: "Cidade e Estado de Residência",
+    type: "text",
+    placeholder: "Ex: São Paulo, SP",
+    helpText: "Informe onde você reside atualmente",
+  },
+  cep: {
+    key: "cep",
+    label: "CEP",
+    type: "text",
+    placeholder: "00000-000",
+    helpText: "Informe seu código de endereçamento postal",
+  },
+  referral: {
+    key: "referralEmail",
+    label: "Indicação de Colaborador",
+    type: "email",
+    placeholder: "colega@empresa.com",
+    helpText: "Caso tenha sido indicado por alguém da empresa, informe o e-mail",
+  },
+  portfolio: {
+    key: "portfolioUrl",
+    label: "Portfólio / GitHub",
+    type: "url",
+    placeholder: "https://github.com/seuperfil",
+    helpText: "Link para seu portfólio, GitHub ou site pessoal",
+  },
 };
 
 export function buildApplicationForm(detail: InhireJobDetail) {
   const visible = detail.settings?.fields ?? [];
   const required = new Set(detail.settings?.requiredFields ?? []);
-  const configuredFields = visible.map<FormField>((sourceKey: string) => {
-    const mapped = FIELD_TYPES[sourceKey] ?? {
+
+  const configuredFields: IApplicationFormField[] = visible.map((sourceKey: string) => {
+    const meta = FIELD_METADATA[sourceKey];
+    if (meta) {
+      let label = meta.label;
+      let helpText = meta.helpText;
+      if (sourceKey === "workModel" && detail.workplaceType) {
+        const workplace =
+          detail.workplaceType === "On-site"
+            ? "Presencial"
+            : detail.workplaceType === "Hybrid"
+              ? "Híbrido"
+              : "Remoto";
+        const loc = detail.location ? ` em ${detail.location}` : "";
+        label = `Disponibilidade para modelo ${workplace}${loc}`;
+        helpText = `Você possui disponibilidade para atuar no modelo ${workplace}${loc}?`;
+      }
+      return {
+        key: meta.key,
+        label,
+        type: meta.type,
+        placeholder: meta.placeholder,
+        helpText,
+        required: required.has(sourceKey),
+        options: [],
+      };
+    }
+
+    // Fallback para campos customizados adicionais
+    const humanized = sourceKey
+      .replace(/([A-Z])/g, " $1")
+      .replace(/[_-]/g, " ")
+      .trim();
+    const capitalized = humanized.charAt(0).toUpperCase() + humanized.slice(1);
+    return {
       key: sourceKey,
-      type: "unknown",
+      label: capitalized,
+      type: "text",
+      placeholder: `Informe ${humanized.toLowerCase()}`,
+      required: required.has(sourceKey),
+      options: [],
     };
-    return { ...mapped, required: required.has(sourceKey), options: [] };
   });
 
   if (visible.includes("salary")) {
     configuredFields.push({
       key: "contractType",
+      label: "Tipo de Contrato",
       type: "select",
+      placeholder: "Selecione o tipo de contrato",
+      helpText: "Selecione a modalidade de contratação desejada",
       required: required.has("salary"),
       options: detail.contractType ?? [],
     });
   }
 
+  const baseFields: IApplicationFormField[] = [
+    {
+      key: "name",
+      label: "Nome completo",
+      type: "text",
+      placeholder: "Ex: Júlio Lima",
+      helpText: "Informe seu nome e sobrenome",
+      required: true,
+      options: [],
+    },
+    {
+      key: "email",
+      label: "E-mail",
+      type: "email",
+      placeholder: "seu.email@exemplo.com",
+      helpText: "E-mail principal para receber atualizações do processo seletivo",
+      required: true,
+      options: [],
+    },
+    {
+      key: "phone",
+      label: "WhatsApp / Telefone",
+      type: "tel",
+      placeholder: "(11) 99999-9999",
+      helpText: "Telefone com DDD para contato da equipe de recrutamento",
+      required: true,
+      options: [],
+    },
+    ...configuredFields,
+    {
+      key: "privacyPolicyAccepted",
+      label: "Termos de Privacidade e LGPD",
+      type: "boolean",
+      placeholder: "",
+      helpText: "Concordância com o tratamento de dados pessoais para o processo seletivo",
+      required: true,
+      options: [],
+    },
+  ];
+
   return {
     version: 1,
     recaptchaRequired: true,
     privacyPolicyUrl: safeHttpUrl(detail.privacyPolicyUrl),
-    fields: [
-      { key: "name", type: "text", required: true, options: [] },
-      { key: "email", type: "email", required: true, options: [] },
-      { key: "phone", type: "tel", required: true, options: [] },
-      ...configuredFields,
-      {
-        key: "privacyPolicyAccepted",
-        type: "boolean",
-        required: true,
-        options: [],
-      },
-    ],
+    fields: baseFields,
     diversityIntroductionHtml: sanitizeJobDescription(
       detail.diversity?.introduction,
     ),
