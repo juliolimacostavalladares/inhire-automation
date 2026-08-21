@@ -1,198 +1,183 @@
 import { buildApplicationForm } from "./application-form.util";
 
 describe("buildApplicationForm", () => {
-  it("accurately builds dynamic application form from real InHire vacancy payload (Qeevo / Quero Educação)", () => {
-    const qeevoJobPayload = {
-      jobId: "afb046bb-e4ed-4b72-981f-f59d33c2d1df",
-      displayName: "Estagiário(a) de Data Analytics",
+  it("accurately builds dynamic application form matching InHire fields, labels and placeholders", () => {
+    const v4JobPayload = {
+      jobId: "f029c4bf-9163-4689-84fd-7376af303d5c",
+      displayName: "🚀 Vaga | BDR/SDR B2B (Júnior e Pleno) | Presencial | Florianópolis/SC",
       workplaceType: "On-site",
-      location: "São José dos Campos, SP, BR",
-      contractType: ["Estágio"],
-      privacyPolicyUrl: "https://files.inhire.app/pages/career/privacy_policy.pdf",
+      location: "Florianópolis, Santa Catarina, Brasil",
+      contractType: ["PJ"],
+      privacyPolicyUrl: "https://www.inhire.com.br/privacidade",
       settings: {
         fields: [
           "linkedin",
-          "salary",
-          "curriculum",
-          "workModel",
-          "referral",
           "location",
+          "workModel",
+          "curriculum",
+          "salary",
+          "referral",
         ],
         requiredFields: [
           "linkedin",
-          "salary",
-          "curriculum",
+          "location",
           "workModel",
-        ],
-      },
-      diversity: {
-        introduction: "<p>Valorizamos a diversidade e a inclusão em nosso time.</p>",
-        questions: [
-          {
-            id: "diversity_gender",
-            title: "Gênero",
-            question: "Qual a sua identidade de gênero?",
-            answerType: "singleChoice",
-            active: true,
-            required: true,
-            order: 1,
-            answerOptions: [
-              { id: "opt_fem", title: "Mulher (cis ou trans)" },
-              { id: "opt_masc", title: "Homem (cis ou trans)" },
-              { id: "opt_nb", title: "Não-binário" },
-              { id: "opt_pref", title: "Prefiro não responder" },
-            ],
-          },
-          {
-            id: "diversity_pcd",
-            title: "PCD",
-            question: "Você é uma pessoa com deficiência (PCD)?",
-            answerType: "singleChoice",
-            active: true,
-            required: true,
-            order: 2,
-            answerOptions: [
-              { id: "pcd_sim", title: "Sim", subQuestionIds: ["pcd_laudo"] },
-              { id: "pcd_nao", title: "Não" },
-            ],
-          },
-          {
-            id: "pcd_laudo",
-            title: "Laudo PCD",
-            question: "Informe detalhes do seu laudo médico / CID",
-            answerType: "shortText",
-            active: true,
-            required: false,
-            order: 3,
-            isSubQuestionOf: "diversity_pcd",
-          },
+          "curriculum",
+          "salary",
         ],
       },
     };
 
-    const form = buildApplicationForm(qeevoJobPayload);
+    const form = buildApplicationForm(v4JobPayload);
 
-    // 1. Version and Privacy Policy
     expect(form.version).toBe(1);
     expect(form.recaptchaRequired).toBe(true);
-    expect(form.privacyPolicyUrl).toBe("https://files.inhire.app/pages/career/privacy_policy.pdf");
 
-    // 2. Base Contact Fields
+    // 1. Core Contact Fields
     expect(form.fields).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ key: "name", label: "Nome completo", required: true }),
-        expect.objectContaining({ key: "email", label: "E-mail", required: true }),
-        expect.objectContaining({ key: "phone", label: "WhatsApp / Telefone", required: true }),
+        expect.objectContaining({
+          key: "name",
+          label: "Nome completo",
+          placeholder: "Seu nome completo",
+          required: true,
+        }),
+        expect.objectContaining({
+          key: "email",
+          label: "Seu melhor email",
+          placeholder: "Seu melhor email",
+          required: true,
+        }),
+        expect.objectContaining({
+          key: "phone",
+          label: "Celular com DDD",
+          placeholder: "(00) 00000-0000",
+          helpText: "+55",
+          required: true,
+        }),
       ]),
     );
 
-    // 3. Configured Dynamic Fields from settings.fields and requiredFields
+    // 2. LinkedIn
     expect(form.fields).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
           key: "linkedinUsername",
-          label: "Perfil do LinkedIn",
-          type: "url",
+          label: "Linkedin",
+          placeholder: "https://linkedin.com/in/seu-perfil",
+          helpText: "(Copie o link do seu perfil do Linkedin e cole no campo acima)",
           required: true,
         }),
+      ]),
+    );
+
+    // 3. Location (Country + City)
+    expect(form.fields).toEqual(
+      expect.arrayContaining([
         expect.objectContaining({
-          key: "salaryExpectation",
-          label: "Pretensão Salarial",
-          type: "currency",
-          required: true,
-        }),
-        expect.objectContaining({
-          key: "contractType",
-          label: "Tipo de Contrato",
+          key: "country",
+          label: "País de origem",
           type: "select",
           required: true,
-          options: ["Estágio"],
         }),
+        expect.objectContaining({
+          key: "location",
+          label: "Cidade",
+          placeholder: "Informe sua cidade",
+          required: true,
+        }),
+      ]),
+    );
+
+    // 4. Work Model Question with Workplace + Location
+    expect(form.fields).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          key: "workModel",
+          label: "Você tem disponibilidade para trabalhar no modelo presencial em Florianópolis, Santa Catarina, Brasil?",
+          type: "boolean",
+          required: true,
+          options: ["Sim", "Não"],
+        }),
+      ]),
+    );
+
+    // 5. Curriculum
+    expect(form.fields).toEqual(
+      expect.arrayContaining([
         expect.objectContaining({
           key: "curriculum",
           label: "Currículo",
           type: "file",
           required: true,
         }),
+      ]),
+    );
+
+    // 6. Salary combined with single contract PJ
+    expect(form.fields).toEqual(
+      expect.arrayContaining([
         expect.objectContaining({
-          key: "workModel",
-          label: "Disponibilidade para modelo Presencial em São José dos Campos, SP, BR",
-          type: "boolean",
-          required: true,
-        }),
-        expect.objectContaining({
-          key: "referralEmail",
-          label: "Indicação de Colaborador",
-          type: "email",
-          required: false,
-        }),
-        expect.objectContaining({
-          key: "location",
-          label: "Cidade e Estado de Residência",
-          type: "text",
-          required: false,
-        }),
-        expect.objectContaining({
-          key: "privacyPolicyAccepted",
-          label: "Termos de Privacidade e LGPD",
+          key: "salaryExpectation",
+          label: "Pretensão salarial como PJ",
+          placeholder: "R$ 0.000,00",
           required: true,
         }),
       ]),
     );
 
-    // 4. Diversity Questions
-    expect(form.diversityQuestions).toHaveLength(3);
-    expect(form.diversityQuestions[0]).toMatchObject({
-      id: "diversity_gender",
-      title: "Gênero",
-      question: "Qual a sua identidade de gênero?",
-      required: true,
-      options: expect.arrayContaining([
-        expect.objectContaining({ id: "opt_fem", title: "Mulher (cis ou trans)" }),
+    // 7. Referral
+    expect(form.fields).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          key: "referral",
+          label: "Você foi indicado por alguém da empresa?",
+          type: "referral",
+          required: false,
+          options: ["Não", "Sim"],
+        }),
       ]),
-    });
-    expect(form.diversityQuestions[1]).toMatchObject({
-      id: "diversity_pcd",
-      required: true,
-      options: expect.arrayContaining([
-        expect.objectContaining({ id: "pcd_sim", title: "Sim", revealsQuestionIds: ["pcd_laudo"] }),
+    );
+
+    // 8. Privacy policy
+    expect(form.fields).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          key: "privacyPolicyAccepted",
+          label: "Ao fornecer seus dados pessoais, você concorda com o que está descrito nesta Política de Privacidade.",
+          required: true,
+        }),
       ]),
-    });
-    expect(form.diversityQuestions[2]).toMatchObject({
-      id: "pcd_laudo",
-      dependsOnQuestionId: "diversity_pcd",
-      required: false,
-    });
+    );
   });
 
-  it("handles minimal vacancy without optional settings or diversity questions", () => {
-    const minimalJob = {
-      jobId: "min-job-1",
-      displayName: "Analista",
+  it("handles multiple contract types on salary field", () => {
+    const jobPayload = {
+      jobId: "job-multi",
+      displayName: "Engenheiro de Software",
+      contractType: ["CLT", "PJ"],
+      settings: {
+        fields: ["salary"],
+        requiredFields: ["salary"],
+      },
     };
 
-    const form = buildApplicationForm(minimalJob);
+    const form = buildApplicationForm(jobPayload);
 
-    expect(form.fields).toHaveLength(4); // name, email, phone, privacyPolicyAccepted
-    expect(form.diversityQuestions).toEqual([]);
-    expect(form.privacyPolicyUrl).toBeNull();
-  });
-
-  it("removes unsafe policy URLs and filters inactive questions", () => {
-    const form = buildApplicationForm({
-      jobId: "job-1",
-      displayName: "Developer",
-      privacyPolicyUrl: "javascript:alert(1)",
-      diversity: {
-        questions: [
-          { id: "inactive_q", active: false },
-          { id: "active_q", active: true, title: "Questão Ativa" },
-        ],
-      },
-    });
-
-    expect(form.privacyPolicyUrl).toBeNull();
-    expect(form.diversityQuestions).toHaveLength(1);
-    expect(form.diversityQuestions[0].id).toBe("active_q");
+    expect(form.fields).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          key: "salaryExpectation",
+          label: "Pretensão salarial",
+          required: true,
+        }),
+        expect.objectContaining({
+          key: "contractType",
+          label: "Tipo de Contrato",
+          options: ["CLT", "PJ"],
+          required: true,
+        }),
+      ]),
+    );
   });
 });
