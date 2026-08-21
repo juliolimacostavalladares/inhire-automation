@@ -253,7 +253,7 @@ export function ApplicationFormWizard({
     for (const field of contactFields) {
       const val = (values[field.key] || '').trim()
       if (field.required && !val) {
-        newErrors[field.key] = `${FIELD_LABELS[field.key] || 'Este campo'} é obrigatório`
+        newErrors[field.key] = `${field.label || FIELD_LABELS[field.key] || 'Este campo'} é obrigatório`
       } else if (field.key === 'email' && val && !val.includes('@')) {
         newErrors.email = 'E-mail inválido'
       }
@@ -267,7 +267,7 @@ export function ApplicationFormWizard({
     for (const field of jobFields) {
       const val = (values[field.key] || '').trim()
       if (field.required && !val) {
-        newErrors[field.key] = `${FIELD_LABELS[field.key] || 'Este campo'} é obrigatório`
+        newErrors[field.key] = `${field.label || FIELD_LABELS[field.key] || 'Este campo'} é obrigatório`
       }
     }
     for (const q of visibleQuestions) {
