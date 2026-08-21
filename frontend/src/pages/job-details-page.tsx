@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { ArrowLeft, Bookmark, ExternalLink, MapPin, Share2 } from 'lucide-react'
+import { ArrowLeft, MapPin } from 'lucide-react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { Logo } from '@/components/brand/logo'
 import { CompanyLogo } from '@/components/brand/company-logo'
@@ -9,7 +9,7 @@ import { Card } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
 import { useJobs } from '@/features/jobs/use-jobs'
 import { TailoredResumeCard } from '@/features/jobs/tailored-resume-card'
-import { cn } from '@/lib/utils'
+import { ApplicationFormWizard } from '@/features/jobs/application-form-wizard'
 
 export function JobDetailsPage() {
   const { id } = useParams<{ id: string }>()
@@ -53,7 +53,7 @@ export function JobDetailsPage() {
         </div>
       </header>
 
-      <main className="mx-auto grid max-w-7xl gap-6 px-5 py-7 sm:px-8 lg:grid-cols-[minmax(0,1fr)_23rem] lg:gap-8 lg:px-10 lg:py-10">
+      <main className="mx-auto grid max-w-7xl gap-6 px-5 py-7 sm:px-8 lg:grid-cols-[minmax(0,1fr)_24rem] lg:gap-8 lg:px-10 lg:py-10">
         <article>
           <Button asChild variant="link" className="mb-5 -ml-3 px-3 text-muted-foreground sm:hidden">
             <Link to="/vagas"><ArrowLeft /> Voltar para vagas</Link>
@@ -110,32 +110,16 @@ export function JobDetailsPage() {
         </article>
 
         <aside className="space-y-6 lg:sticky lg:top-6 lg:h-fit">
-          <TailoredResumeCard jobId={job.id} jobTitle={job.title} />
+          <ApplicationFormWizard
+            jobId={job.id}
+            jobTitle={job.title}
+            company={job.company}
+            jobUrl={job.url}
+            isFavorited={favorites.has(job.id)}
+            onToggleFavorite={() => toggleFavorite(job.id)}
+          />
 
-          <Card className="p-5 sm:p-6">
-            <p className="text-eyebrow">PRÓXIMO PASSO</p>
-            <h2 className="mt-3 text-xl font-extrabold tracking-[-0.025em]">Gostou dessa oportunidade?</h2>
-            <p className="mt-2 text-sm leading-6 text-muted-foreground">
-              Você será direcionado para a página oficial da InHire para concluir a candidatura.
-            </p>
-            <Button size="lg" className="mt-6 w-full" asChild>
-              <a href={job.url} target="_blank" rel="noreferrer">
-                Candidatar-se na InHire <ExternalLink />
-              </a>
-            </Button>
-            <div className="mt-3 grid grid-cols-2 gap-3">
-              <Button variant="outline" onClick={() => toggleFavorite(job.id)} aria-pressed={favorites.has(job.id)}>
-                <Bookmark className={cn(favorites.has(job.id) && 'fill-primary text-primary')} />
-                {favorites.has(job.id) ? 'Salva' : 'Salvar'}
-              </Button>
-              <Button variant="outline" onClick={() => void navigator.clipboard?.writeText(job.url)}>
-                <Share2 /> Compartilhar
-              </Button>
-            </div>
-            <p className="mt-5 text-center text-xs leading-5 text-muted-foreground">
-              A candidatura é feita externamente e não é registrada como candidatura no InHire Hub.
-            </p>
-          </Card>
+          <TailoredResumeCard jobId={job.id} jobTitle={job.title} />
         </aside>
       </main>
     </div>
