@@ -12,8 +12,11 @@ export class GetTenantUseCase {
     private readonly tenantsRepository: ITenantsRepository,
   ) {}
 
-  async execute(id: string): Promise<ITenantOutputDTO> {
-    const tenant = await this.tenantsRepository.findById(id);
+  async execute(idOrSlug: string): Promise<ITenantOutputDTO> {
+    let tenant = await this.tenantsRepository.findById(idOrSlug);
+    if (!tenant) {
+      tenant = await this.tenantsRepository.findBySlug(idOrSlug);
+    }
     if (!tenant) throw new NotFoundException('Tenant not found');
     return tenant;
   }

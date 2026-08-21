@@ -1,4 +1,4 @@
-import { BriefcaseBusiness, LogIn, LogOut, UserRound } from 'lucide-react'
+import { BriefcaseBusiness, Building2, LogIn, LogOut, UserRound } from 'lucide-react'
 import { NavLink } from 'react-router-dom'
 import { Logo } from '@/components/brand/logo'
 import { Button } from '@/components/ui/button'
@@ -22,6 +22,7 @@ export function CandidateTopbar() {
         <Logo />
         <nav className="hidden items-center gap-2 md:flex" aria-label="Navegação do candidato">
           <Button asChild variant="ghost"><NavLink to="/vagas"><BriefcaseBusiness /> Portal de vagas</NavLink></Button>
+          <Button asChild variant="ghost"><NavLink to="/empresas"><Building2 /> Empresas</NavLink></Button>
           {user && (
             <Button asChild variant="ghost"><NavLink to="/minha-area"><UserRound /> Minhas Vagas</NavLink></Button>
           )}

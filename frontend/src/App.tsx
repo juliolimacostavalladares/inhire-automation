@@ -3,6 +3,8 @@ import { Navigate, Outlet, Route, Routes } from 'react-router-dom'
 import { ThemeProvider } from '@/components/theme/theme-provider'
 import { JobsSearchPage } from '@/pages/jobs-search-page'
 import { JobDetailsPage } from '@/pages/job-details-page'
+import { CompaniesSearchPage } from '@/pages/companies-search-page'
+import { CompanyDetailsPage } from '@/pages/company-details-page'
 import { FavoritesPage } from '@/pages/favorites-page'
 import {
   BackofficeDashboardPage,
@@ -40,6 +42,8 @@ export default function App() {
         <Route path="/cadastro" element={<RegisterPage />} />
         <Route path="/vagas" element={<JobsSearchPage />} />
         <Route path="/vagas/:id" element={<JobDetailsPage />} />
+        <Route path="/empresas" element={<CompaniesSearchPage />} />
+        <Route path="/empresas/:slug" element={<CompanyDetailsPage />} />
         <Route element={<CandidateAuthRoutes />}>
           <Route path="/onboarding/perfil" element={<ProfileOnboardingPage />} />
         </Route>

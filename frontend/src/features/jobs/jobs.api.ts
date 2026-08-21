@@ -7,6 +7,8 @@ export interface JobsQuery {
   limit?: number
   title?: string
   area?: string
+  tenantId?: string
+  tenantSlug?: string
   workplaceType?: string
   location?: string
   status?: 'PUBLISHED' | 'CLOSED'

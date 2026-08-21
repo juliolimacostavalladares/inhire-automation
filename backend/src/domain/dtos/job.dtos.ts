@@ -21,6 +21,7 @@ export interface ICreateJobInputDTO {
 
 export interface IJobFilterDTO {
   tenantId?: string;
+  tenantSlug?: string;
   status?: JobStatus;
   workplaceType?: string;
   location?: string;
