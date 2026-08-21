@@ -42,6 +42,8 @@ interface ApplicationFormProps {
   jobTitle: string
   company: string
   jobUrl: string
+  workplace?: string
+  location?: string
   initialFormStructure?: ApplicationFormStructure | null
   isFavorited?: boolean
   onToggleFavorite?: () => void
@@ -63,6 +65,8 @@ export function ApplicationFormWizard({
   jobTitle,
   company,
   jobUrl,
+  workplace,
+  location: jobLocation,
   initialFormStructure,
   isFavorited = false,
   onToggleFavorite,
@@ -75,7 +79,7 @@ export function ApplicationFormWizard({
   )
   const [tailoredResume, setTailoredResume] = useState<TailoredResume | null>(null)
 
-  // Dynamic values stored by field key and question ID
+  // Form field values
   const [values, setValues] = useState<Record<string, string>>({
     country: 'Brasil',
     workModel: 'Sim',
@@ -149,19 +153,201 @@ export function ApplicationFormWizard({
     })
   }, [user, profile])
 
-  // Ordered fields from backend
-  const dynamicFields = useMemo(() => {
-    const fields = formStructure?.fields ?? [
-      { key: 'name', label: 'Nome completo', placeholder: 'Seu nome completo', type: 'text', required: true, options: [] },
-      { key: 'email', label: 'Seu melhor email', placeholder: 'Seu melhor email', type: 'email', required: true, options: [] },
-      { key: 'phone', label: 'Celular com DDD', placeholder: '(00) 00000-0000', helpText: '+55', type: 'tel', required: true, options: [] },
-      { key: 'privacyPolicyAccepted', label: 'Ao fornecer seus dados pessoais, você concorda com o que está descrito nesta Política de Privacidade.', type: 'boolean', required: true, options: [] },
-    ]
-
-    return fields.filter((f) => f.key !== 'privacyPolicyAccepted' && f.key !== 'curriculum')
+  // Detect contract type from contractType field options
+  const contractTypeOptions = useMemo(() => {
+    const field = formStructure?.fields.find((f) => f.key === 'contractType')
+    return field?.options ?? []
   }, [formStructure])
 
-  // Diversity & custom vacancy questions from backend
+  const singleContractType = useMemo(() => {
+    if (contractTypeOptions.length === 1) return contractTypeOptions[0]
+    return null
+  }, [contractTypeOptions])
+
+  // Normalized dynamic fields from backend
+  const dynamicFields = useMemo(() => {
+    const rawFields = formStructure?.fields ?? [
+      { key: 'name', type: 'text', required: true, options: [] },
+      { key: 'email', type: 'email', required: true, options: [] },
+      { key: 'phone', type: 'tel', required: true, options: [] },
+      { key: 'privacyPolicyAccepted', type: 'boolean', required: true, options: [] },
+    ]
+
+    const result: ApplicationFormField[] = []
+    const rawKeys = new Set(rawFields.map((f) => f.key))
+
+    // 1. Name
+    result.push({
+      key: 'name',
+      label: 'Nome completo',
+      placeholder: 'Seu nome completo',
+      type: 'text',
+      required: true,
+      options: [],
+    })
+
+    // 2. Email
+    result.push({
+      key: 'email',
+      label: 'Seu melhor email',
+      placeholder: 'Seu melhor email',
+      type: 'email',
+      required: true,
+      options: [],
+    })
+
+    // 3. Phone
+    result.push({
+      key: 'phone',
+      label: 'Celular com DDD',
+      placeholder: '(00) 00000-0000',
+      helpText: '+55',
+      type: 'tel',
+      required: true,
+      options: [],
+    })
+
+    // 4. LinkedIn
+    if (rawKeys.has('linkedinUsername') || rawKeys.has('linkedin')) {
+      const field = rawFields.find((f) => f.key === 'linkedinUsername' || f.key === 'linkedin')
+      result.push({
+        key: 'linkedinUsername',
+        label: 'Linkedin',
+        placeholder: 'https://linkedin.com/in/seu-perfil',
+        helpText: '(Copie o link do seu perfil do Linkedin e cole no campo acima)',
+        type: 'url',
+        required: field?.required ?? true,
+        options: [],
+      })
+    }
+
+    // 5. Location (Country + City)
+    if (rawKeys.has('location') || rawKeys.has('city') || rawKeys.has('country')) {
+      const field = rawFields.find((f) => f.key === 'location' || f.key === 'city')
+      result.push({
+        key: 'country',
+        label: 'País de origem',
+        placeholder: 'Selecione o país',
+        type: 'select',
+        required: field?.required ?? true,
+        options: ['Brasil', 'Portugal', 'Estados Unidos', 'Argentina', 'Outro'],
+      })
+      result.push({
+        key: 'location',
+        label: 'Cidade',
+        placeholder: 'Informe sua cidade',
+        type: 'text',
+        required: field?.required ?? true,
+        options: [],
+      })
+    }
+
+    // 6. CEP
+    if (rawKeys.has('cep')) {
+      const field = rawFields.find((f) => f.key === 'cep')
+      result.push({
+        key: 'cep',
+        label: 'CEP',
+        placeholder: '00000-000',
+        type: 'text',
+        required: field?.required ?? false,
+        options: [],
+      })
+    }
+
+    // 7. Work Model Question
+    if (rawKeys.has('workModel')) {
+      const field = rawFields.find((f) => f.key === 'workModel')
+      const wp = workplace?.toLowerCase() || 'presencial'
+      const loc = jobLocation ? ` em ${jobLocation}` : ''
+      result.push({
+        key: 'workModel',
+        label: field?.label && field.label.includes('?') ? field.label : `Você tem disponibilidade para trabalhar no modelo ${wp}${loc}?`,
+        type: 'boolean',
+        required: field?.required ?? true,
+        options: ['Sim', 'Não'],
+      })
+    }
+
+    // 8. Salary Expectation
+    if (rawKeys.has('salaryExpectation') || rawKeys.has('salary')) {
+      const field = rawFields.find((f) => f.key === 'salaryExpectation' || f.key === 'salary')
+      const salaryLabel = singleContractType
+        ? `Pretensão salarial como ${singleContractType}`
+        : 'Pretensão salarial'
+      result.push({
+        key: 'salaryExpectation',
+        label: salaryLabel,
+        placeholder: 'R$ 0.000,00',
+        type: 'currency',
+        required: field?.required ?? true,
+        options: [],
+      })
+
+      // Multiple contract types select
+      if (contractTypeOptions.length > 1) {
+        result.push({
+          key: 'contractType',
+          label: 'Tipo de Contrato',
+          placeholder: 'Selecione o tipo de contrato',
+          type: 'select',
+          required: true,
+          options: contractTypeOptions,
+        })
+      }
+    }
+
+    // 9. Referral
+    if (rawKeys.has('referral') || rawKeys.has('referralEmail')) {
+      const field = rawFields.find((f) => f.key === 'referral' || f.key === 'referralEmail')
+      result.push({
+        key: 'referral',
+        label: 'Você foi indicado por alguém da empresa?',
+        type: 'referral',
+        required: field?.required ?? false,
+        options: ['Não', 'Sim'],
+      })
+    }
+
+    // 10. Additional custom tenant fields
+    for (const f of rawFields) {
+      if (
+        [
+          'name',
+          'email',
+          'phone',
+          'linkedinUsername',
+          'linkedin',
+          'location',
+          'city',
+          'country',
+          'cep',
+          'workModel',
+          'salaryExpectation',
+          'salary',
+          'contractType',
+          'referral',
+          'referralEmail',
+          'curriculum',
+          'privacyPolicyAccepted',
+        ].includes(f.key)
+      ) {
+        continue
+      }
+      result.push({
+        key: f.key,
+        label: f.label || f.key,
+        placeholder: f.placeholder || `Informe ${f.label || f.key}`,
+        type: f.type || 'text',
+        required: f.required ?? false,
+        options: f.options ?? [],
+      })
+    }
+
+    return result
+  }, [formStructure, workplace, jobLocation, singleContractType, contractTypeOptions])
+
+  // Diversity questions
   const visibleQuestions = useMemo(() => {
     const questions = formStructure?.diversityQuestions ?? []
     return questions.filter((q) => {
@@ -189,7 +375,7 @@ export function ApplicationFormWizard({
     }
   }
 
-  // Full form validation matching InHire rules
+  // Form Validation
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {}
 
@@ -217,7 +403,7 @@ export function ApplicationFormWizard({
     }
 
     if (!privacyPolicyAccepted) {
-      newErrors.privacy = 'Você precisa concordar com os termos de privacidade para continuar'
+      newErrors.privacy = 'Você precisa concordar com a política de privacidade para continuar'
     }
 
     setErrors(newErrors)
@@ -244,7 +430,7 @@ export function ApplicationFormWizard({
         location: (values.location || '').trim() || undefined,
         linkedinUrl: (values.linkedinUsername || '').trim() || undefined,
         salaryExpectation: (values.salaryExpectation || '').trim() || undefined,
-        contractType: values.contractType || undefined,
+        contractType: singleContractType || values.contractType || undefined,
         workModel: values.workModel || undefined,
         coverNote: coverNote.trim() || undefined,
         resumeType,
@@ -273,7 +459,7 @@ export function ApplicationFormWizard({
     setTimeout(() => setCopiedLink(false), 2000)
   }
 
-  // Render a single dynamic form field matching InHire's exact logic and design
+  // Render a single dynamic form field matching InHire site exactly
   const renderField = (field: ApplicationFormField) => {
     const val = values[field.key] || ''
     const label = field.label || field.key
@@ -281,8 +467,8 @@ export function ApplicationFormWizard({
     const icon = FIELD_ICONS[field.key]
     const hasError = Boolean(errors[field.key])
 
-    // 1. Work Model (Disponibilidade para trabalhar no modelo da vaga: Sim / Não)
-    if (field.key === 'workModel' || (field.type === 'boolean' && field.options?.includes('Sim'))) {
+    // 1. Work Model Question (Sim / Não)
+    if (field.key === 'workModel' || field.type === 'boolean') {
       const currentChoice = values.workModel || 'Sim'
       return (
         <div key={field.key} className="space-y-1.5">
@@ -311,7 +497,7 @@ export function ApplicationFormWizard({
       )
     }
 
-    // 2. Referral (Você foi indicado por alguém da empresa?: Não / Sim)
+    // 2. Referral Question (Não / Sim)
     if (field.key === 'referral' || field.type === 'referral') {
       const hasReferral = values.hasReferral || 'Não'
       return (
@@ -382,7 +568,36 @@ export function ApplicationFormWizard({
       )
     }
 
-    // 4. Standard Text / Email / Phone / URL / Currency Inputs
+    // 4. Celular com DDD (+55)
+    if (field.key === 'phone' || field.type === 'tel') {
+      return (
+        <div key={field.key} className="space-y-1">
+          <Label htmlFor={`app-field-${field.key}`} className="text-xs font-bold text-foreground">
+            {label} {field.required && <span className="text-destructive">*</span>}
+          </Label>
+          <div className="flex items-center gap-2">
+            <div className="flex h-11 items-center justify-center rounded-xl border border-input bg-accent/30 px-3 text-xs font-bold text-foreground shrink-0">
+              +55
+            </div>
+            <div className="flex-1">
+              <Input
+                id={`app-field-${field.key}`}
+                type="tel"
+                value={val}
+                onChange={(e) => handleFieldChange(field.key, e.target.value)}
+                placeholder={placeholder}
+                startIcon={icon}
+                invalid={hasError}
+                className="h-11 text-xs rounded-xl bg-background border-input focus-within:border-primary"
+              />
+            </div>
+          </div>
+          {hasError && <p className="text-[11px] text-destructive font-semibold">{errors[field.key]}</p>}
+        </div>
+      )
+    }
+
+    // 5. Standard Text / Email / URL / Currency Inputs
     return (
       <div key={field.key} className="space-y-1">
         <Label htmlFor={`app-field-${field.key}`} className="text-xs font-bold text-foreground">
@@ -396,7 +611,7 @@ export function ApplicationFormWizard({
         <div className="relative">
           <Input
             id={`app-field-${field.key}`}
-            type={field.type === 'email' ? 'email' : field.type === 'tel' ? 'tel' : 'text'}
+            type={field.type === 'email' ? 'email' : 'text'}
             value={val}
             onChange={(e) => handleFieldChange(field.key, e.target.value)}
             placeholder={placeholder}
