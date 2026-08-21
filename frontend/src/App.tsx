@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { Navigate, Outlet, Route, Routes } from 'react-router-dom'
 import { ThemeProvider } from '@/components/theme/theme-provider'
 import { JobsSearchPage } from '@/pages/jobs-search-page'
@@ -16,6 +17,7 @@ import { ApplicationsPage } from '@/pages/applications-page'
 import { RequireAuth } from '@/components/auth/require-auth'
 import { RegisterPage } from '@/pages/register-page'
 import { ProfileOnboardingPage } from '@/pages/profile-onboarding-page'
+import { useAuthStore } from '@/features/auth/auth.store'
 
 function CandidateAuthRoutes() {
   return <RequireAuth><Outlet /></RequireAuth>
@@ -26,6 +28,11 @@ function AdminAuthRoutes() {
 }
 
 export default function App() {
+  const hydrate = useAuthStore((state) => state.hydrate)
+
+  useEffect(() => {
+    void hydrate()
+  }, [hydrate])
   return (
     <ThemeProvider attribute="class" defaultTheme="light" forcedTheme="light" enableSystem={false} disableTransitionOnChange>
       <Routes>
