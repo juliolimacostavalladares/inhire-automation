@@ -5,6 +5,15 @@ import { CandidateTopbar } from '@/components/layout/candidate-topbar'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from '@/components/ui/pagination'
 import { JobCard } from '@/features/jobs/job-card'
 import { useJobsStore } from '@/features/jobs/jobs.store'
 import { useAuth } from '@/features/auth/use-auth'
@@ -14,12 +23,15 @@ type QuickFilter = 'recommended' | 'recent' | 'remote' | 'tech' | 'health' | 'fi
 
 export function JobsSearchPage() {
   const [query, setQuery] = useState('')
+  const [currentPage, setCurrentPage] = useState(1)
   const [activeFilter, setActiveFilter] = useState<QuickFilter>('recommended')
   const [recentFrom] = useState(() => new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString())
-  const { jobs, total, candidateArea, profileComplete, favorites, loading, error, fetchJobs, toggleFavorite } = useJobsStore()
+  const { jobs, total, pages, limit, candidateArea, profileComplete, favorites, loading, error, fetchJobs, toggleFavorite } = useJobsStore()
   const { user } = useAuth()
 
   const request = useMemo(() => ({
+    page: currentPage,
+    limit: 10,
     ...(activeFilter === 'recent' ? { firstSeenFrom: recentFrom } : {}),
     ...(activeFilter === 'remote' ? { workplaceType: 'Remote' } : {}),
     ...(activeFilter === 'tech' ? { area: 'Tecnologia' } : {}),
@@ -27,7 +39,7 @@ export function JobsSearchPage() {
     ...(activeFilter === 'finance' ? { area: 'Finanças' } : {}),
     ...(activeFilter === 'recommended' && candidateArea ? { area: candidateArea } : {}),
     title: query.trim() || undefined,
-  }), [activeFilter, query, recentFrom, candidateArea])
+  }), [activeFilter, query, recentFrom, candidateArea, currentPage])
 
   useEffect(() => {
     const timeout = window.setTimeout(() => {
@@ -36,7 +48,40 @@ export function JobsSearchPage() {
     return () => window.clearTimeout(timeout)
   }, [fetchJobs, request])
 
-  const filteredJobs = jobs
+  const handleQueryChange = (val: string) => {
+    setQuery(val)
+    setCurrentPage(1)
+  }
+
+  const handleFilterChange = (filter: QuickFilter) => {
+    setActiveFilter(filter)
+    setCurrentPage(1)
+  }
+
+  const handlePageChange = (page: number) => {
+    if (page < 1 || page > pages || page === currentPage) return
+    setCurrentPage(page)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  const paginationRange = useMemo(() => {
+    if (pages <= 7) {
+      return Array.from({ length: pages }, (_, i) => i + 1)
+    }
+
+    if (currentPage <= 4) {
+      return [1, 2, 3, 4, 5, 'ellipsis', pages] as (number | 'ellipsis')[]
+    }
+
+    if (currentPage >= pages - 3) {
+      return [1, 'ellipsis', pages - 4, pages - 3, pages - 2, pages - 1, pages] as (number | 'ellipsis')[]
+    }
+
+    return [1, 'ellipsis', currentPage - 1, currentPage, currentPage + 1, 'ellipsis', pages] as (number | 'ellipsis')[]
+  }, [currentPage, pages])
+
+  const startRange = total === 0 ? 0 : (currentPage - 1) * limit + 1
+  const endRange = Math.min(currentPage * limit, total)
 
   return (
     <div className="min-h-svh bg-canvas">
@@ -87,7 +132,7 @@ export function JobsSearchPage() {
               startIcon={<Search className="size-4 text-muted-foreground" />}
               placeholder="Cargo, habilidade ou empresa"
               value={query}
-              onChange={(event) => setQuery(event.target.value)}
+              onChange={(event) => handleQueryChange(event.target.value)}
               aria-label="Buscar vagas"
             />
           </div>
@@ -114,7 +159,7 @@ export function JobsSearchPage() {
                   : 'border-border bg-card text-foreground font-semibold hover:border-foreground/30',
               )}
               aria-pressed={activeFilter === 'recommended'}
-              onClick={() => setActiveFilter('recommended')}
+              onClick={() => handleFilterChange('recommended')}
             >
               <UserCheck className="mr-1.5 size-3.5" />
               Para você ({candidateArea})
@@ -132,7 +177,7 @@ export function JobsSearchPage() {
                 : 'border-border bg-card text-foreground font-semibold hover:border-foreground/30',
             )}
             aria-pressed={activeFilter === 'recent'}
-            onClick={() => setActiveFilter('recent')}
+            onClick={() => handleFilterChange('recent')}
           >
             Últimas 2 semanas
           </Button>
@@ -148,7 +193,7 @@ export function JobsSearchPage() {
                 : 'border-border bg-card text-foreground font-semibold hover:border-foreground/30',
             )}
             aria-pressed={activeFilter === 'remote'}
-            onClick={() => setActiveFilter('remote')}
+            onClick={() => handleFilterChange('remote')}
           >
             Remoto
           </Button>
@@ -164,7 +209,7 @@ export function JobsSearchPage() {
                 : 'border-border bg-card text-foreground font-semibold hover:border-foreground/30',
             )}
             aria-pressed={activeFilter === 'all'}
-            onClick={() => setActiveFilter('all')}
+            onClick={() => handleFilterChange('all')}
           >
             Todas as áreas
           </Button>
@@ -212,16 +257,67 @@ export function JobsSearchPage() {
               <Button onClick={() => void fetchJobs(request)}>Tentar novamente</Button>
             </div>
           </div>
-        ) : filteredJobs.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pb-12 items-stretch">
-            {filteredJobs.map((job) => (
-              <JobCard
-                key={job.id}
-                job={job}
-                favorite={favorites.has(job.id)}
-                onFavorite={() => toggleFavorite(job.id)}
-              />
-            ))}
+        ) : jobs.length > 0 ? (
+          <div className="space-y-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-stretch">
+              {jobs.map((job) => (
+                <JobCard
+                  key={job.id}
+                  job={job}
+                  favorite={favorites.has(job.id)}
+                  onFavorite={() => toggleFavorite(job.id)}
+                />
+              ))}
+            </div>
+
+            {/* Pagination Controls */}
+            {pages > 1 && (
+              <div className="mt-8 flex flex-col items-center justify-between gap-4 border-t border-border/60 pt-6 sm:flex-row">
+                <p className="text-xs font-medium text-muted-foreground order-2 sm:order-1">
+                  Mostrando <span className="font-bold text-foreground">{startRange}</span> a <span className="font-bold text-foreground">{endRange}</span> de <span className="font-bold text-foreground">{total}</span> vagas
+                </p>
+
+                <Pagination className="mx-0 w-auto order-1 sm:order-2">
+                  <PaginationContent>
+                    <PaginationItem>
+                      <PaginationPrevious
+                        disabled={currentPage <= 1 || loading}
+                        onClick={() => handlePageChange(currentPage - 1)}
+                      />
+                    </PaginationItem>
+
+                    {paginationRange.map((pageItem, index) => {
+                      if (pageItem === 'ellipsis') {
+                        return (
+                          <PaginationItem key={`ellipsis-${index}`}>
+                            <PaginationEllipsis />
+                          </PaginationItem>
+                        )
+                      }
+
+                      return (
+                        <PaginationItem key={pageItem}>
+                          <PaginationLink
+                            isActive={pageItem === currentPage}
+                            disabled={loading}
+                            onClick={() => handlePageChange(pageItem)}
+                          >
+                            {pageItem}
+                          </PaginationLink>
+                        </PaginationItem>
+                      )
+                    })}
+
+                    <PaginationItem>
+                      <PaginationNext
+                        disabled={currentPage >= pages || loading}
+                        onClick={() => handlePageChange(currentPage + 1)}
+                      />
+                    </PaginationItem>
+                  </PaginationContent>
+                </Pagination>
+              </div>
+            )}
           </div>
         ) : (
           <div className="rounded-2xl border border-dashed border-border bg-card/60 p-12 text-center">
