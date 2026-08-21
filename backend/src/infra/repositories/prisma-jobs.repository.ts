@@ -109,6 +109,24 @@ export class PrismaJobsRepository implements IJobsRepository {
           }
         : undefined;
 
+    const titleOrCompanyCondition: Prisma.JobWhereInput | undefined = filter.title
+      ? {
+          OR: [
+            { title: { contains: filter.title, mode: 'insensitive' as const } },
+            { tenant: { name: { contains: filter.title, mode: 'insensitive' as const } } },
+            { tenant: { slug: { contains: filter.title, mode: 'insensitive' as const } } },
+          ],
+        }
+      : undefined;
+
+    const conditions: Prisma.JobWhereInput[] = [];
+    if (titleOrCompanyCondition) {
+      conditions.push(titleOrCompanyCondition);
+    }
+    if (areaCondition) {
+      conditions.push(areaCondition);
+    }
+
     const where: Prisma.JobWhereInput = {
       tenantId: filter.tenantId,
       tenant: filter.tenantSlug
@@ -121,10 +139,7 @@ export class PrismaJobsRepository implements IJobsRepository {
       location: filter.location
         ? { contains: filter.location, mode: 'insensitive' }
         : undefined,
-      title: filter.title
-        ? { contains: filter.title, mode: 'insensitive' }
-        : undefined,
-      ...(areaCondition ? { AND: [areaCondition] } : {}),
+      ...(conditions.length > 0 ? { AND: conditions } : {}),
       firstSeenAt:
         filter.firstSeenFrom || filter.firstSeenTo
           ? {

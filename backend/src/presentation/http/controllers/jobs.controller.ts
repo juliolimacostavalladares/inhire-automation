@@ -85,7 +85,7 @@ export class JobsController {
       if (profile) {
         profileComplete = profile.status === 'COMPLETE' || profile.status === 'NEEDS_REVIEW';
         candidateArea = profile.professionalArea || profile.professionalTitle || undefined;
-        if (!query.area && !query.tenantId && !query.tenantSlug && candidateArea) {
+        if (!query.area && !query.title && !query.location && !query.tenantId && !query.tenantSlug && candidateArea) {
           query.area = candidateArea;
         }
       }
