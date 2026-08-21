@@ -19,12 +19,12 @@ import {
   Loader2,
   Bookmark,
   Share2,
+  Check,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
 import { useAuth } from '@/features/auth/use-auth'
 import { useProfileStore } from '@/features/profile/profile.store'
 import {
@@ -147,7 +147,6 @@ export function ApplicationFormWizard({
 
   const validateStep2 = (): boolean => {
     const newErrors: Record<string, string> = {}
-    // Validate required diversity questions if any
     if (formStructure?.diversityQuestions) {
       for (const q of formStructure.diversityQuestions) {
         if (q.required && !answers[q.id]?.trim()) {
@@ -230,32 +229,32 @@ export function ApplicationFormWizard({
   const progressPercent = step === 1 ? 33 : step === 2 ? 66 : 100
 
   return (
-    <Card className="overflow-hidden border border-border/80 bg-card shadow-sm transition-all">
-      {/* Wizard Header */}
-      <div className="border-b border-border/60 bg-accent/20 p-4 sm:p-5">
+    <Card className="overflow-hidden border border-border bg-card shadow-sm transition-all rounded-2xl">
+      {/* Wizard Header - InHire Design System */}
+      <div className="border-b border-border bg-accent/15 p-5">
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <span className="flex size-6 items-center justify-center rounded-md bg-primary text-primary-foreground font-black text-xs shadow-2xs">
               <Briefcase className="size-3.5" />
             </span>
-            <span className="text-[11px] font-extrabold tracking-wider uppercase text-foreground">
-              Candidatura Rápida
+            <span className="text-[10px] font-extrabold tracking-wider uppercase text-foreground">
+              CANDIDATURA RÁPIDA
             </span>
           </div>
 
           {step < 4 && (
-            <Badge variant="outline" className="text-[10px] font-bold px-2 py-0.5 bg-background">
+            <span className="inline-flex items-center rounded-full border border-primary/30 bg-primary/10 px-2.5 py-0.5 text-[10px] font-black text-primary">
               Passo {step} de 3
-            </Badge>
+            </span>
           )}
         </div>
 
-        <div className="mt-2.5 flex items-center justify-between">
-          <h3 className="text-sm font-extrabold tracking-tight text-foreground">
+        <div className="mt-3 flex items-center justify-between">
+          <h3 className="text-base font-extrabold tracking-tight text-foreground">
             {stepTitles[step]}
           </h3>
           {step < 4 && (
-            <span className="text-[11px] font-semibold text-muted-foreground">
+            <span className="text-[11px] font-bold text-muted-foreground">
               {progressPercent}%
             </span>
           )}
@@ -263,7 +262,7 @@ export function ApplicationFormWizard({
 
         {/* Progress Bar */}
         {step < 4 && (
-          <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-border/60">
+          <div className="mt-2.5 h-1.5 w-full overflow-hidden rounded-full bg-border/60">
             <div
               className="h-full bg-primary transition-all duration-300 ease-out"
               style={{ width: `${progressPercent}%` }}
@@ -273,7 +272,7 @@ export function ApplicationFormWizard({
       </div>
 
       {/* Form Content */}
-      <div className="p-4 sm:p-5">
+      <div className="p-5">
         {submitError && (
           <div role="alert" className="mb-4 rounded-xl border border-destructive/40 bg-destructive/10 p-3 text-xs font-semibold text-destructive flex items-start gap-2">
             <AlertCircle className="size-4 shrink-0 mt-0.5" />
@@ -283,20 +282,20 @@ export function ApplicationFormWizard({
 
         {/* STEP 1: Dados Pessoais & Contato */}
         {step === 1 && (
-          <div className="space-y-3.5 animate-in fade-in duration-150">
+          <div className="space-y-4 animate-in fade-in duration-150">
             <div>
               <Label htmlFor="applicant-name" className="text-xs font-bold text-foreground">
                 Nome completo <span className="text-destructive">*</span>
               </Label>
-              <div className="mt-1">
+              <div className="mt-1.5">
                 <Input
                   id="applicant-name"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="Ex: Júlio Lima"
-                  startIcon={<User className="size-4" />}
+                  startIcon={<User className="size-4 text-muted-foreground" />}
                   invalid={Boolean(errors.name)}
-                  className="h-10 text-xs rounded-xl"
+                  className="h-11 text-xs rounded-xl bg-background border-input focus-within:border-primary"
                 />
               </div>
               {errors.name && <p className="mt-1 text-[11px] text-destructive font-semibold">{errors.name}</p>}
@@ -306,16 +305,16 @@ export function ApplicationFormWizard({
               <Label htmlFor="applicant-email" className="text-xs font-bold text-foreground">
                 E-mail <span className="text-destructive">*</span>
               </Label>
-              <div className="mt-1">
+              <div className="mt-1.5">
                 <Input
                   id="applicant-email"
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="seu.email@exemplo.com"
-                  startIcon={<Mail className="size-4" />}
+                  startIcon={<Mail className="size-4 text-muted-foreground" />}
                   invalid={Boolean(errors.email)}
-                  className="h-10 text-xs rounded-xl"
+                  className="h-11 text-xs rounded-xl bg-background border-input focus-within:border-primary"
                 />
               </div>
               {errors.email && <p className="mt-1 text-[11px] text-destructive font-semibold">{errors.email}</p>}
@@ -326,15 +325,15 @@ export function ApplicationFormWizard({
                 <Label htmlFor="applicant-phone" className="text-xs font-bold text-foreground">
                   WhatsApp / Celular <span className="text-destructive">*</span>
                 </Label>
-                <div className="mt-1">
+                <div className="mt-1.5">
                   <Input
                     id="applicant-phone"
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
                     placeholder="(11) 99999-9999"
-                    startIcon={<Phone className="size-4" />}
+                    startIcon={<Phone className="size-4 text-muted-foreground" />}
                     invalid={Boolean(errors.phone)}
-                    className="h-10 text-xs rounded-xl"
+                    className="h-11 text-xs rounded-xl bg-background border-input focus-within:border-primary"
                   />
                 </div>
                 {errors.phone && <p className="mt-1 text-[11px] text-destructive font-semibold">{errors.phone}</p>}
@@ -344,14 +343,14 @@ export function ApplicationFormWizard({
                 <Label htmlFor="applicant-location" className="text-xs font-bold text-foreground">
                   Cidade / Estado
                 </Label>
-                <div className="mt-1">
+                <div className="mt-1.5">
                   <Input
                     id="applicant-location"
                     value={location}
                     onChange={(e) => setLocation(e.target.value)}
                     placeholder="São Paulo, SP"
-                    startIcon={<MapPin className="size-4" />}
-                    className="h-10 text-xs rounded-xl"
+                    startIcon={<MapPin className="size-4 text-muted-foreground" />}
+                    className="h-11 text-xs rounded-xl bg-background border-input focus-within:border-primary"
                   />
                 </div>
               </div>
@@ -361,14 +360,14 @@ export function ApplicationFormWizard({
               <Label htmlFor="applicant-linkedin" className="text-xs font-bold text-foreground">
                 Perfil do LinkedIn
               </Label>
-              <div className="mt-1">
+              <div className="mt-1.5">
                 <Input
                   id="applicant-linkedin"
                   value={linkedinUrl}
                   onChange={(e) => setLinkedinUrl(e.target.value)}
                   placeholder="linkedin.com/in/seuperfil"
-                  startIcon={<Globe className="size-4" />}
-                  className="h-10 text-xs rounded-xl"
+                  startIcon={<Globe className="size-4 text-muted-foreground" />}
+                  className="h-11 text-xs rounded-xl bg-background border-input focus-within:border-primary"
                 />
               </div>
             </div>
@@ -376,29 +375,29 @@ export function ApplicationFormWizard({
             <Button
               type="button"
               onClick={handleNext}
-              className="mt-2 w-full h-10 rounded-xl font-bold text-xs gap-1.5"
+              className="mt-2 w-full h-11 rounded-xl font-extrabold text-xs bg-primary text-primary-foreground hover:bg-primary/90 shadow-2xs gap-2"
             >
-              Próximo passo <ArrowRight className="size-3.5" />
+              Próximo passo <ArrowRight className="size-4" />
             </Button>
           </div>
         )}
 
         {/* STEP 2: Perguntas & Fit */}
         {step === 2 && (
-          <div className="space-y-3.5 animate-in fade-in duration-150">
+          <div className="space-y-4 animate-in fade-in duration-150">
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <Label htmlFor="applicant-salary" className="text-xs font-bold text-foreground">
                   Pretensão Salarial
                 </Label>
-                <div className="mt-1">
+                <div className="mt-1.5">
                   <Input
                     id="applicant-salary"
                     value={salaryExpectation}
                     onChange={(e) => setSalaryExpectation(e.target.value)}
                     placeholder="R$ 10.000,00"
-                    startIcon={<DollarSign className="size-4" />}
-                    className="h-10 text-xs rounded-xl"
+                    startIcon={<DollarSign className="size-4 text-muted-foreground" />}
+                    className="h-11 text-xs rounded-xl bg-background border-input focus-within:border-primary"
                   />
                 </div>
               </div>
@@ -410,7 +409,7 @@ export function ApplicationFormWizard({
                 <select
                   value={contractType}
                   onChange={(e) => setContractType(e.target.value)}
-                  className="mt-1 h-10 w-full rounded-xl border border-input bg-background px-3 text-xs font-medium text-foreground outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-ring/25"
+                  className="mt-1.5 h-11 w-full rounded-xl border border-input bg-background px-3 text-xs font-medium text-foreground outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-ring/25"
                 >
                   <option value="CLT">CLT</option>
                   <option value="PJ">PJ</option>
@@ -424,17 +423,17 @@ export function ApplicationFormWizard({
               <Label className="text-xs font-bold text-foreground">
                 Modalidade de Trabalho Preferida
               </Label>
-              <div className="mt-1.5 grid grid-cols-3 gap-1.5">
+              <div className="mt-1.5 grid grid-cols-3 gap-2">
                 {(['Remoto', 'Híbrido', 'Presencial'] as const).map((model) => (
                   <button
                     key={model}
                     type="button"
                     onClick={() => setWorkModel(model)}
                     className={cn(
-                      'h-8 rounded-lg border text-xs font-bold transition-all text-center',
+                      'h-9 rounded-xl border text-xs font-bold transition-all text-center',
                       workModel === model
                         ? 'border-primary bg-primary text-primary-foreground font-black shadow-2xs'
-                        : 'border-border bg-card text-foreground hover:bg-accent',
+                        : 'border-border bg-background text-foreground hover:bg-accent',
                     )}
                   >
                     {model}
@@ -443,10 +442,10 @@ export function ApplicationFormWizard({
               </div>
             </div>
 
-            {/* Diversity Questions from InHire if configured */}
+            {/* Diversity / Custom Questions */}
             {formStructure?.diversityQuestions && formStructure.diversityQuestions.length > 0 && (
-              <div className="mt-3 space-y-3 rounded-xl border border-border/80 bg-accent/10 p-3">
-                <p className="text-[11px] font-extrabold uppercase tracking-wider text-muted-foreground">
+              <div className="mt-3 space-y-3 rounded-2xl border border-border bg-accent/15 p-3.5">
+                <p className="text-[10px] font-black uppercase tracking-wider text-muted-foreground">
                   Perguntas Adicionais da Vaga
                 </p>
                 {formStructure.diversityQuestions.map((q) => (
@@ -459,7 +458,7 @@ export function ApplicationFormWizard({
                       <select
                         value={answers[q.id] ?? ''}
                         onChange={(e) => setAnswers((prev) => ({ ...prev, [q.id]: e.target.value }))}
-                        className="mt-1 h-9 w-full rounded-xl border border-input bg-background px-3 text-xs text-foreground outline-none"
+                        className="mt-1.5 h-10 w-full rounded-xl border border-input bg-background px-3 text-xs text-foreground outline-none focus:border-primary"
                       >
                         <option value="">Selecione uma opção</option>
                         {q.options.map((opt) => (
@@ -473,7 +472,7 @@ export function ApplicationFormWizard({
                         value={answers[q.id] ?? ''}
                         onChange={(e) => setAnswers((prev) => ({ ...prev, [q.id]: e.target.value }))}
                         placeholder={q.placeholder || 'Sua resposta'}
-                        className="mt-1 h-9 text-xs rounded-xl"
+                        className="mt-1.5 h-10 text-xs rounded-xl bg-background"
                       />
                     )}
                     {errors[q.id] && <p className="mt-1 text-[11px] text-destructive font-semibold">{errors[q.id]}</p>}
@@ -484,7 +483,7 @@ export function ApplicationFormWizard({
 
             <div>
               <Label htmlFor="applicant-note" className="text-xs font-bold text-foreground">
-                Mensagem ou Carta de Apresentação (Opcional)
+                Mensagem ou Apresentação (Opcional)
               </Label>
               <textarea
                 id="applicant-note"
@@ -492,7 +491,7 @@ export function ApplicationFormWizard({
                 onChange={(e) => setCoverNote(e.target.value)}
                 placeholder="Conte brevemente por que você tem o perfil ideal para esta vaga..."
                 rows={3}
-                className="mt-1 w-full rounded-xl border border-input bg-background p-2.5 text-xs text-foreground placeholder:text-muted-foreground outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-ring/25 resize-none"
+                className="mt-1.5 w-full rounded-xl border border-input bg-background p-3 text-xs text-foreground placeholder:text-muted-foreground outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-ring/25 resize-none"
               />
             </div>
 
@@ -501,16 +500,16 @@ export function ApplicationFormWizard({
                 type="button"
                 variant="outline"
                 onClick={handleBack}
-                className="h-10 flex-1 rounded-xl text-xs font-bold gap-1"
+                className="h-11 flex-1 rounded-xl text-xs font-bold gap-1.5 border-border bg-card hover:bg-accent"
               >
-                <ArrowLeft className="size-3.5" /> Voltar
+                <ArrowLeft className="size-4" /> Voltar
               </Button>
               <Button
                 type="button"
                 onClick={handleNext}
-                className="h-10 flex-1 rounded-xl text-xs font-bold gap-1"
+                className="h-11 flex-1 rounded-xl text-xs font-extrabold gap-1.5 bg-primary text-primary-foreground hover:bg-primary/90 shadow-2xs"
               >
-                Próximo <ArrowRight className="size-3.5" />
+                Próximo <ArrowRight className="size-4" />
               </Button>
             </div>
           </div>
@@ -518,12 +517,12 @@ export function ApplicationFormWizard({
 
         {/* STEP 3: Currículo & Envio */}
         {step === 3 && (
-          <div className="space-y-3.5 animate-in fade-in duration-150">
+          <div className="space-y-4 animate-in fade-in duration-150">
             <div>
               <Label className="text-xs font-bold text-foreground">
                 Selecione o Currículo a ser enviado
               </Label>
-              <div className="mt-2 space-y-2">
+              <div className="mt-2 space-y-2.5">
                 {/* 1. Tailored Resume Option */}
                 <div
                   role="button"
@@ -531,25 +530,29 @@ export function ApplicationFormWizard({
                   onClick={() => setResumeType('TAILORED')}
                   onKeyDown={(e) => e.key === 'Enter' && setResumeType('TAILORED')}
                   className={cn(
-                    'cursor-pointer rounded-xl border p-3 transition-all flex items-start gap-3 text-left',
+                    'cursor-pointer rounded-2xl border p-3.5 transition-all flex items-start gap-3 text-left',
                     resumeType === 'TAILORED'
                       ? 'border-primary bg-primary/10 shadow-2xs'
-                      : 'border-border bg-card hover:bg-accent/40',
+                      : 'border-border bg-background hover:bg-accent/40',
                   )}
                 >
-                  <div className="mt-0.5 grid size-7 shrink-0 place-items-center rounded-lg bg-primary text-primary-foreground">
+                  <div className="mt-0.5 grid size-8 shrink-0 place-items-center rounded-xl bg-primary text-primary-foreground font-black">
                     <Sparkles className="size-4" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between gap-1">
                       <p className="text-xs font-extrabold text-foreground">Currículo Sob Medida (ATS)</p>
                       {tailoredResume ? (
-                        <span className="text-[10px] font-bold text-primary bg-primary/20 px-1.5 py-0.5 rounded-full">Pronto</span>
+                        <span className="text-[10px] font-black text-primary bg-primary/20 border border-primary/30 px-2 py-0.5 rounded-full flex items-center gap-1">
+                          <Check className="size-2.5" /> Pronto
+                        </span>
                       ) : (
-                        <span className="text-[10px] font-bold text-muted-foreground bg-accent px-1.5 py-0.5 rounded-full">IA Gerado</span>
+                        <span className="text-[10px] font-bold text-muted-foreground bg-accent px-2 py-0.5 rounded-full">
+                          IA Gerado
+                        </span>
                       )}
                     </div>
-                    <p className="text-[11px] text-muted-foreground mt-0.5 leading-relaxed">
+                    <p className="text-[11px] text-muted-foreground mt-1 leading-relaxed">
                       Currículo otimizado com palavras-chave e match para esta vaga de {jobTitle}.
                     </p>
                   </div>
@@ -562,19 +565,19 @@ export function ApplicationFormWizard({
                   onClick={() => setResumeType('PROFILE')}
                   onKeyDown={(e) => e.key === 'Enter' && setResumeType('PROFILE')}
                   className={cn(
-                    'cursor-pointer rounded-xl border p-3 transition-all flex items-start gap-3 text-left',
+                    'cursor-pointer rounded-2xl border p-3.5 transition-all flex items-start gap-3 text-left',
                     resumeType === 'PROFILE'
                       ? 'border-primary bg-primary/10 shadow-2xs'
-                      : 'border-border bg-card hover:bg-accent/40',
+                      : 'border-border bg-background hover:bg-accent/40',
                   )}
                 >
-                  <div className="mt-0.5 grid size-7 shrink-0 place-items-center rounded-lg bg-accent text-foreground">
+                  <div className="mt-0.5 grid size-8 shrink-0 place-items-center rounded-xl bg-accent text-foreground font-black">
                     <FileText className="size-4" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-xs font-extrabold text-foreground">Currículo Padrão do Perfil</p>
-                    <p className="text-[11px] text-muted-foreground mt-0.5 leading-relaxed">
-                      Envia seu histórico completo cadastrado na plataforma InHire Hub.
+                    <p className="text-[11px] text-muted-foreground mt-1 leading-relaxed">
+                      Envia seu histórico profissional cadastrado no InHire Hub.
                     </p>
                   </div>
                 </div>
@@ -582,7 +585,7 @@ export function ApplicationFormWizard({
             </div>
 
             {/* Privacy Acceptance */}
-            <div className="rounded-xl border border-border/80 bg-accent/10 p-3">
+            <div className="rounded-2xl border border-border bg-accent/15 p-3.5">
               <label className="flex items-start gap-2.5 cursor-pointer text-left">
                 <input
                   type="checkbox"
@@ -604,23 +607,23 @@ export function ApplicationFormWizard({
                 variant="outline"
                 onClick={handleBack}
                 disabled={submitting}
-                className="h-10 flex-1 rounded-xl text-xs font-bold gap-1"
+                className="h-11 flex-1 rounded-xl text-xs font-bold gap-1.5 border-border bg-card hover:bg-accent"
               >
-                <ArrowLeft className="size-3.5" /> Voltar
+                <ArrowLeft className="size-4" /> Voltar
               </Button>
               <Button
                 type="button"
                 onClick={handleSubmit}
                 disabled={submitting}
-                className="h-10 flex-1 rounded-xl text-xs font-black gap-1.5 bg-primary text-primary-foreground hover:bg-primary/90 shadow-2xs"
+                className="h-11 flex-1 rounded-xl text-xs font-black gap-2 bg-primary text-primary-foreground hover:bg-primary/90 shadow-2xs"
               >
                 {submitting ? (
                   <>
-                    <Loader2 className="size-3.5 animate-spin" /> Enviando…
+                    <Loader2 className="size-4 animate-spin" /> Enviando…
                   </>
                 ) : (
                   <>
-                    <Send className="size-3.5" /> Concluir Candidatura
+                    <Send className="size-4" /> Concluir Candidatura
                   </>
                 )}
               </Button>
@@ -636,18 +639,21 @@ export function ApplicationFormWizard({
             </div>
 
             <div>
-              <h4 className="text-base font-extrabold text-foreground">
-                Candidatura Enviada com Sucesso!
+              <span className="inline-flex items-center rounded-full border border-primary/30 bg-primary/10 px-2.5 py-0.5 text-[10px] font-black text-primary">
+                CANDIDATURA ENVIADA
+              </span>
+              <h4 className="mt-2 text-lg font-black tracking-tight text-foreground">
+                Candidatura Concluída!
               </h4>
-              <p className="mt-1 text-xs text-muted-foreground leading-relaxed">
+              <p className="mt-1.5 text-xs text-muted-foreground leading-relaxed">
                 Seus dados e currículo foram registrados para a vaga <strong className="text-foreground">{jobTitle}</strong> na empresa <strong className="text-foreground">{company}</strong>.
               </p>
             </div>
 
-            <div className="rounded-2xl border border-border bg-accent/20 p-3 text-left space-y-1.5">
+            <div className="rounded-2xl border border-border bg-accent/20 p-3.5 text-left space-y-2">
               <div className="flex items-center justify-between text-xs">
                 <span className="text-muted-foreground font-medium">Candidato:</span>
-                <span className="font-bold text-foreground">{name}</span>
+                <span className="font-extrabold text-foreground">{name}</span>
               </div>
               <div className="flex items-center justify-between text-xs">
                 <span className="text-muted-foreground font-medium">E-mail:</span>
@@ -655,16 +661,16 @@ export function ApplicationFormWizard({
               </div>
               <div className="flex items-center justify-between text-xs">
                 <span className="text-muted-foreground font-medium">Currículo:</span>
-                <span className="font-bold text-foreground">
+                <span className="font-extrabold text-foreground">
                   {resumeType === 'TAILORED' ? '⚡ Sob Medida (ATS)' : '📄 Padrão do Perfil'}
                 </span>
               </div>
             </div>
 
             <div className="space-y-2 pt-1">
-              <Button size="sm" className="w-full h-9 rounded-xl text-xs font-bold gap-1.5" asChild>
+              <Button size="sm" className="w-full h-10 rounded-xl text-xs font-black gap-2 bg-primary text-primary-foreground hover:bg-primary/90 shadow-2xs" asChild>
                 <a href={jobUrl} target="_blank" rel="noreferrer">
-                  Ver Vaga Oficial no InHire <ExternalLink className="size-3" />
+                  Ver Vaga Oficial no InHire <ExternalLink className="size-3.5" />
                 </a>
               </Button>
 
@@ -675,7 +681,7 @@ export function ApplicationFormWizard({
                     variant="outline"
                     size="sm"
                     onClick={onToggleFavorite}
-                    className="h-9 rounded-xl text-xs font-semibold gap-1"
+                    className="h-10 rounded-xl text-xs font-bold gap-1.5 border-border bg-card hover:bg-accent"
                   >
                     <Bookmark className={cn('size-3.5', isFavorited && 'fill-primary text-primary')} />
                     {isFavorited ? 'Salva' : 'Salvar Vaga'}
@@ -687,7 +693,7 @@ export function ApplicationFormWizard({
                   variant="outline"
                   size="sm"
                   onClick={handleCopyLink}
-                  className="h-9 rounded-xl text-xs font-semibold gap-1"
+                  className="h-10 rounded-xl text-xs font-bold gap-1.5 border-border bg-card hover:bg-accent"
                 >
                   <Share2 className="size-3.5" />
                   {copiedLink ? 'Copiado!' : 'Compartilhar'}
@@ -700,9 +706,9 @@ export function ApplicationFormWizard({
 
       {/* Footer Disclaimer */}
       {step < 4 && (
-        <div className="border-t border-border/60 bg-accent/10 px-4 py-2.5 text-center">
-          <p className="flex items-center justify-center gap-1.5 text-[10px] font-semibold text-muted-foreground">
-            <ShieldCheck className="size-3 text-primary" /> Candidatura direta e segura via InHire Hub
+        <div className="border-t border-border bg-accent/10 px-5 py-3 text-center">
+          <p className="flex items-center justify-center gap-1.5 text-[10px] font-bold text-muted-foreground">
+            <ShieldCheck className="size-3.5 text-primary" /> Candidatura direta e segura via InHire Hub
           </p>
         </div>
       )}
