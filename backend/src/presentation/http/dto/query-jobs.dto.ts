@@ -16,6 +16,11 @@ export class QueryJobsDto extends PaginationDto {
   @IsUUID()
   tenantId?: string;
 
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  tenantSlug?: string;
+
   @ApiPropertyOptional({ enum: JobStatus })
   @IsOptional()
   @IsEnum(JobStatus)

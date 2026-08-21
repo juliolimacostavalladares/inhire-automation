@@ -13,8 +13,6 @@ import {
 } from '../../app/repositories/tenants.repository.interface';
 import { PrismaService } from '../databases/prisma/prisma.service';
 
-type TenantRecord = Prisma.TenantGetPayload<Record<string, never>>;
-
 @Injectable()
 export class PrismaTenantsRepository implements ITenantsRepository {
   constructor(private readonly prisma: PrismaService) {}
@@ -69,8 +67,13 @@ export class PrismaTenantsRepository implements ITenantsRepository {
   async findBySlug(slug: string): Promise<ITenantOutputDTO | null> {
     const tenant = await this.prisma.tenant.findUnique({
       where: { slug },
+      include: { _count: { select: { jobs: true } } },
     });
-    return tenant ? this.toOutputDTO(tenant) : null;
+    if (!tenant) return null;
+    return {
+      ...this.toOutputDTO(tenant),
+      jobsCount: tenant._count?.jobs ?? 0,
+    };
   }
 
   async findMany(params: IQueryTenantsParams): Promise<IPaginatedResult<ITenantOutputDTO>> {
@@ -90,6 +93,7 @@ export class PrismaTenantsRepository implements ITenantsRepository {
     const [data, total] = await this.prisma.$transaction([
       this.prisma.tenant.findMany({
         where,
+        include: { _count: { select: { jobs: true } } },
         orderBy: { name: 'asc' },
         skip: (params.page - 1) * params.limit,
         take: params.limit,
@@ -98,7 +102,10 @@ export class PrismaTenantsRepository implements ITenantsRepository {
     ]);
 
     return {
-      data: data.map((t: TenantRecord) => this.toOutputDTO(t)),
+      data: data.map((t) => ({
+        ...this.toOutputDTO(t),
+        jobsCount: t._count?.jobs ?? 0,
+      })),
       meta: {
         total,
         page: params.page,
