@@ -111,7 +111,10 @@ export async function getJob(id: string) {
 
 export interface ApplicationFormField {
   key: string
+  label?: string
   type: string
+  placeholder?: string
+  helpText?: string
   required: boolean
   options: string[]
 }

@@ -360,8 +360,8 @@ export function ApplicationFormWizard({
   // Render a single dynamic form field from backend
   const renderDynamicField = (field: ApplicationFormField) => {
     const val = values[field.key] || ''
-    const label = FIELD_LABELS[field.key] || field.key
-    const placeholder = FIELD_PLACEHOLDERS[field.key] || `Informe ${label.toLowerCase()}`
+    const label = field.label || FIELD_LABELS[field.key] || field.key
+    const placeholder = field.placeholder || FIELD_PLACEHOLDERS[field.key] || `Informe ${label.toLowerCase()}`
     const icon = FIELD_ICONS[field.key]
     const hasError = Boolean(errors[field.key])
 
@@ -371,10 +371,15 @@ export function ApplicationFormWizard({
           <Label className="text-xs font-bold text-foreground">
             {label} {field.required && <span className="text-destructive">*</span>}
           </Label>
+          {field.helpText && (
+            <p className="text-[11px] text-muted-foreground mt-0.5 mb-1 leading-normal">
+              {field.helpText}
+            </p>
+          )}
           <select
             value={val}
             onChange={(e) => handleFieldChange(field.key, e.target.value)}
-            className="mt-1.5 h-11 w-full rounded-xl border border-input bg-background px-3 text-xs font-medium text-foreground outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-ring/25"
+            className="mt-1 h-11 w-full rounded-xl border border-input bg-background px-3 text-xs font-medium text-foreground outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-ring/25"
           >
             <option value="">Selecione…</option>
             {field.options.map((opt) => (
@@ -395,6 +400,11 @@ export function ApplicationFormWizard({
           <Label className="text-xs font-bold text-foreground">
             {label} {field.required && <span className="text-destructive">*</span>}
           </Label>
+          {field.helpText && (
+            <p className="text-[11px] text-muted-foreground mt-0.5 mb-1 leading-normal">
+              {field.helpText}
+            </p>
+          )}
           <div className="mt-1.5 grid grid-cols-3 gap-2">
             {(['Remoto', 'Híbrido', 'Presencial'] as const).map((model) => (
               <button
@@ -422,7 +432,12 @@ export function ApplicationFormWizard({
         <Label htmlFor={`app-field-${field.key}`} className="text-xs font-bold text-foreground">
           {label} {field.required && <span className="text-destructive">*</span>}
         </Label>
-        <div className="mt-1.5">
+        {field.helpText && (
+          <p className="text-[11px] text-muted-foreground mt-0.5 mb-1 leading-normal">
+            {field.helpText}
+          </p>
+        )}
+        <div className="mt-1">
           <Input
             id={`app-field-${field.key}`}
             type={field.type === 'email' ? 'email' : field.type === 'tel' ? 'tel' : 'text'}

@@ -4,6 +4,7 @@ import { InhireClientService } from '../../../infra/providers/inhire/inhire-clie
 import { InhireJob } from '../../../infra/providers/inhire/inhire.types';
 import { sanitizeJobDescription } from '../../../infra/utils/job-description.util';
 import { buildApplicationForm } from '../../../infra/utils/application-form.util';
+import { Prisma } from '@prisma/client';
 import { jobSlug } from '../../../infra/utils/slug.util';
 import { PrismaService } from '../../../infra/databases/prisma/prisma.service';
 
@@ -93,7 +94,7 @@ export class SyncTenantJobsUseCase {
         const detailData = detail
           ? {
               descriptionHtml: sanitizeJobDescription(detail.description),
-              applicationForm: buildApplicationForm(detail),
+              applicationForm: buildApplicationForm(detail) as unknown as Prisma.InputJsonValue,
               publishedAt: this.parseDate(detail.publishedAt),
               lastPublishedAt: this.parseDate(detail.lastPublishedAt),
               detailFetchedAt: now,
