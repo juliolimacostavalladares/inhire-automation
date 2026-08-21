@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { ArrowLeft, Bookmark, Check, ExternalLink, MapPin, Share2 } from 'lucide-react'
+import { ArrowLeft, Bookmark, ExternalLink, MapPin, Share2 } from 'lucide-react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { Logo } from '@/components/brand/logo'
 import { CompanyLogo } from '@/components/brand/company-logo'
@@ -89,31 +89,21 @@ export function JobDetailsPage() {
 
             <Separator />
 
-            <div className="space-y-8 p-6 sm:p-8 lg:p-10">
-              {detailError && <p role="alert" className="rounded-lg border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive">{detailError}</p>}
+            <div className="p-6 sm:p-8 lg:p-10">
+              {detailError && <p role="alert" className="mb-6 rounded-lg border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive">{detailError}</p>}
 
               <section>
-                <h2 className="text-lg font-extrabold">Sobre a vaga</h2>
-                <p className="mt-3 max-w-3xl text-sm leading-7 text-muted-foreground">{job.description}</p>
-              </section>
-
-              <section>
-                <h2 className="text-lg font-extrabold">Principais requisitos</h2>
-                <ul className="mt-4 grid gap-3 text-sm leading-6 text-muted-foreground sm:grid-cols-2">
-                  {job.requirements.map((requirement) => (
-                    <li key={requirement} className="flex gap-3">
-                      <Check className="mt-1 size-4 shrink-0 text-primary" />
-                      {requirement}
-                    </li>
-                  ))}
-                </ul>
-              </section>
-
-              <section>
-                <h2 className="text-lg font-extrabold">Como é trabalhar aqui</h2>
-                <p className="mt-3 max-w-3xl text-sm leading-7 text-muted-foreground">
-                  Faça parte de um ambiente colaborativo, com autonomia para propor soluções e espaço para evoluir junto com o time.
-                </p>
+                <h2 className="mb-6 text-xl font-extrabold text-foreground">Descrição da vaga</h2>
+                {job.descriptionHtml ? (
+                  <div
+                    className="prose max-w-none text-sm leading-relaxed text-muted-foreground [&_h1]:text-xl [&_h1]:font-extrabold [&_h1]:text-foreground [&_h1]:mt-6 [&_h1]:mb-3 [&_h2]:text-lg [&_h2]:font-extrabold [&_h2]:text-foreground [&_h2]:mt-5 [&_h2]:mb-2.5 [&_h3]:text-base [&_h3]:font-bold [&_h3]:text-foreground [&_h3]:mt-4 [&_h3]:mb-2 [&_p]:mb-4 [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:mb-4 [&_ul]:space-y-1.5 [&_ol]:list-decimal [&_ol]:pl-5 [&_ol]:mb-4 [&_ol]:space-y-1.5 [&_li]:text-muted-foreground [&_strong]:text-foreground [&_strong]:font-bold [&_b]:text-foreground [&_b]:font-bold [&_a]:text-primary [&_a]:underline"
+                    dangerouslySetInnerHTML={{ __html: job.descriptionHtml }}
+                  />
+                ) : (
+                  <p className="whitespace-pre-line text-sm leading-7 text-muted-foreground">
+                    {job.description}
+                  </p>
+                )}
               </section>
             </div>
           </Card>
