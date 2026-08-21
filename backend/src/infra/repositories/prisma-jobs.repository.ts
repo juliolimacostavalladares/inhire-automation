@@ -111,7 +111,9 @@ export class PrismaJobsRepository implements IJobsRepository {
 
     const where: Prisma.JobWhereInput = {
       tenantId: filter.tenantId,
-      tenant: filter.tenantSlug ? { slug: filter.tenantSlug } : undefined,
+      tenant: filter.tenantSlug
+        ? { slug: { equals: filter.tenantSlug, mode: 'insensitive' } }
+        : undefined,
       status: filter.status,
       workplaceType: filter.workplaceType
         ? { contains: filter.workplaceType, mode: 'insensitive' }

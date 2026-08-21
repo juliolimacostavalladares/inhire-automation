@@ -71,6 +71,7 @@ export function CompanyDetailsPage() {
 
     const timer = setTimeout(() => {
       listJobs({
+        tenantId: tenant?.id,
         tenantSlug: slug,
         page: currentPage,
         limit,
@@ -97,7 +98,7 @@ export function CompanyDetailsPage() {
       active = false
       clearTimeout(timer)
     }
-  }, [slug, query, workplaceType, currentPage])
+  }, [slug, tenant?.id, query, workplaceType, currentPage])
 
   const handleQueryChange = (val: string) => {
     setQuery(val)
