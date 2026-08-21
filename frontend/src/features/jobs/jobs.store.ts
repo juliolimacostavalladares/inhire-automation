@@ -6,6 +6,9 @@ import type { Job } from './jobs.data'
 interface JobsState {
   jobs: Job[]
   total: number
+  page: number
+  limit: number
+  pages: number
   candidateArea?: string
   profileComplete?: boolean
   selectedJob: Job | null
@@ -23,6 +26,9 @@ interface JobsState {
 export const useJobsStore = create<JobsState>((set, get) => ({
   jobs: [],
   total: 0,
+  page: 1,
+  limit: 10,
+  pages: 1,
   candidateArea: undefined,
   profileComplete: undefined,
   selectedJob: null,
@@ -38,12 +44,15 @@ export const useJobsStore = create<JobsState>((set, get) => ({
       set({
         jobs: result.data,
         total: result.meta.total,
+        page: result.meta.page,
+        limit: result.meta.limit,
+        pages: result.meta.pages,
         candidateArea: result.candidateArea,
         profileComplete: result.profileComplete,
         loading: false,
       })
     } catch (error) {
-      set({ jobs: [], total: 0, loading: false, error: getApiErrorMessage(error) })
+      set({ jobs: [], total: 0, page: 1, pages: 1, loading: false, error: getApiErrorMessage(error) })
     }
   },
   selectJob: async (id) => {
