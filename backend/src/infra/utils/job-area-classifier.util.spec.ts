@@ -11,7 +11,7 @@ describe('JobAreaClassifier', () => {
       expect(detectJobArea('Desenvolvedor(a) Full Stack Java')).toBe(CanonicalArea.TECNOLOGIA);
       expect(detectJobArea('Senior Python Developer')).toBe(CanonicalArea.TECNOLOGIA);
       expect(detectJobArea('Engenheiro de Software React Native')).toBe(CanonicalArea.TECNOLOGIA);
-      expect(detectJobArea('Analista de QA / Testes')).toBe(CanonicalArea.TECNOLOGIA);
+      expect(detectJobArea('Analista de QA')).toBe(CanonicalArea.TECNOLOGIA);
       expect(detectJobArea('DevOps Engineer AWS')).toBe(CanonicalArea.TECNOLOGIA);
     });
 
@@ -37,14 +37,28 @@ describe('JobAreaClassifier', () => {
       expect(detectJobArea('Especialista de Recursos Humanos')).toBe(CanonicalArea.RH);
       expect(detectJobArea('Tech Recruiter Pleno')).toBe(CanonicalArea.RH);
     });
+
+    it('detects VENDAS and OPERACOES for commercial, security and operational roles', () => {
+      expect(detectJobArea('Vaga para Executivo de Negócios – SOROCABA / SP')).toBe(CanonicalArea.VENDAS);
+      expect(detectJobArea('Executivo De Negócios - Uberlândia MG')).toBe(CanonicalArea.VENDAS);
+      expect(detectJobArea('VIGIA - Promissão - SP (captação de curriculo para banco de dados)')).toBe(CanonicalArea.OPERACOES);
+      expect(detectJobArea('AUXILIAR DE SERVIÇOS AEROPORTUÁRIOS | PROAIR | GUARULHOS')).toBe(CanonicalArea.OPERACOES);
+    });
   });
 
   describe('matchesArea', () => {
     it('matches developer jobs with programming/engineering profile regardless of tech stack', () => {
       expect(matchesArea('Desenvolvedor(a) Full Stack Java', 'Programador')).toBe(true);
-      expect(matchesArea('Pessoa Desenvolvedora Front End - React Pl', 'Engenharia de Software')).toBe(true);
+      expect(matchesArea('Pessoa Desenvolvedora Front End - React Pl', 'Engenharia de Software / Front-end')).toBe(true);
       expect(matchesArea('Python Developer', 'Tecnologia')).toBe(true);
       expect(matchesArea('Analista Financeiro', 'Desenvolvedor')).toBe(false);
+    });
+
+    it('does NOT match commercial, security or operational jobs for software engineers', () => {
+      expect(matchesArea('Vaga para Executivo de Negócios – SOROCABA / SP', 'Engenharia de Software / Front-end')).toBe(false);
+      expect(matchesArea('VIGIA - Promissão - SP (captação de curriculo para banco de dados)', 'Engenharia de Software / Front-end')).toBe(false);
+      expect(matchesArea('AUXILIAR DE SERVIÇOS AEROPORTUÁRIOS | PROAIR | GUARULHOS', 'Engenharia de Software / Front-end')).toBe(false);
+      expect(matchesArea('Executivo de Negócios Financeiros Ribeirão Preto/SP', 'Engenharia de Software / Front-end')).toBe(false);
     });
 
     it('matches health jobs with medical profile', () => {
