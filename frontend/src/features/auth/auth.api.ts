@@ -22,6 +22,9 @@ export async function login(input: LoginInput) {
     if (token) {
       localStorage.setItem('inhire_token', token)
     }
+    if (data.user) {
+      localStorage.setItem('inhire_user', JSON.stringify(data.user))
+    }
     return data.user
   } catch (error) {
     if (axios.isAxiosError(error) && !error.response) {
@@ -40,12 +43,18 @@ export async function register(input: { name: string; email: string; password: s
   if (token) {
     localStorage.setItem('inhire_token', token)
   }
+  if (data.user) {
+    localStorage.setItem('inhire_user', JSON.stringify(data.user))
+  }
   return data.user
 }
 
 export async function getCurrentUser() {
   try {
     const { data } = await http.get<AuthUser>('/auth/me')
+    if (data) {
+      localStorage.setItem('inhire_user', JSON.stringify(data))
+    }
     return data
   } catch (error) {
     if (
@@ -53,6 +62,7 @@ export async function getCurrentUser() {
       (error.response?.status === 401 || error.response?.status === 404)
     ) {
       localStorage.removeItem('inhire_token')
+      localStorage.removeItem('inhire_user')
     }
     throw error
   }
@@ -60,5 +70,10 @@ export async function getCurrentUser() {
 
 export async function logout() {
   localStorage.removeItem('inhire_token')
-  await http.post('/auth/logout')
+  localStorage.removeItem('inhire_user')
+  try {
+    await http.post('/auth/logout')
+  } catch {
+    // Ignore network error on logout
+  }
 }

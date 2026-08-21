@@ -26,6 +26,7 @@ http.interceptors.response.use(
     ) {
       if (typeof window !== 'undefined') {
         localStorage.removeItem('inhire_token')
+        localStorage.removeItem('inhire_user')
       }
     }
     return Promise.reject(error)
