@@ -58,7 +58,7 @@ export class PrismaTenantsRepository implements ITenantsRepository {
     }
     const tenant = await this.prisma.tenant.findUnique({
       where: { id },
-      include: { _count: { select: { jobs: true } } },
+      include: { _count: { select: { jobs: { where: { status: 'PUBLISHED' } } } } },
     });
     if (!tenant) return null;
     return {
@@ -75,7 +75,7 @@ export class PrismaTenantsRepository implements ITenantsRepository {
           { name: { equals: slug, mode: 'insensitive' } },
         ],
       },
-      include: { _count: { select: { jobs: true } } },
+      include: { _count: { select: { jobs: { where: { status: 'PUBLISHED' } } } } },
     });
     if (!tenant) return null;
     return {
@@ -101,7 +101,7 @@ export class PrismaTenantsRepository implements ITenantsRepository {
     const [data, total] = await this.prisma.$transaction([
       this.prisma.tenant.findMany({
         where,
-        include: { _count: { select: { jobs: true } } },
+        include: { _count: { select: { jobs: { where: { status: 'PUBLISHED' } } } } },
         orderBy: { name: 'asc' },
         skip: (params.page - 1) * params.limit,
         take: params.limit,
