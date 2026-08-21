@@ -1,5 +1,8 @@
 import { BullModule } from '@nestjs/bullmq';
 import { Module } from '@nestjs/common';
+import { JwtModule } from '@nestjs/jwt';
+import { ConfigService } from '@nestjs/config';
+import type { Environment } from '../../../infra/config/environment';
 import { JobsController } from '../../http/controllers/jobs.controller';
 import { ListJobsUseCase } from '../../../app/useCases/jobs/list-jobs.usecase';
 import { GetJobDetailUseCase } from '../../../app/useCases/jobs/get-job-detail.usecase';
@@ -25,6 +28,13 @@ import { ResumeGenerationProcessor } from '../../../infra/services/resume/resume
     AiModule,
     PdfModule,
     BullModule.registerQueue({ name: RESUME_GENERATION_QUEUE }),
+    JwtModule.registerAsync({
+      inject: [ConfigService],
+      useFactory: (config: ConfigService<Environment, true>) => ({
+        secret: config.get('jwtSecret', { infer: true }),
+        signOptions: { expiresIn: config.get('jwtExpiresIn', { infer: true }) },
+      }),
+    }),
   ],
   controllers: [JobsController],
   providers: [
