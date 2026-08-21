@@ -8,8 +8,6 @@ import {
   DollarSign,
   FileText,
   Sparkles,
-  ArrowRight,
-  ArrowLeft,
   CheckCircle2,
   AlertCircle,
   Briefcase,
@@ -39,7 +37,7 @@ import {
 import { getApiErrorMessage } from '@/lib/api/http'
 import { cn } from '@/lib/utils'
 
-interface ApplicationFormWizardProps {
+interface ApplicationFormProps {
   jobId: string
   jobTitle: string
   company: string
@@ -49,19 +47,17 @@ interface ApplicationFormWizardProps {
   onToggleFavorite?: () => void
 }
 
-type WizardStep = 1 | 2 | 3 | 4
-
 const FIELD_LABELS: Record<string, string> = {
   name: 'Nome completo',
   email: 'E-mail',
-  phone: 'WhatsApp / Celular',
-  location: 'Cidade / Estado',
+  phone: 'WhatsApp / Telefone',
+  location: 'Cidade e Estado de Residência',
   cep: 'CEP',
   linkedinUsername: 'Perfil do LinkedIn',
-  referralEmail: 'E-mail de Indicação',
+  referralEmail: 'Indicação de Colaborador (E-mail)',
   salaryExpectation: 'Pretensão Salarial',
   contractType: 'Tipo de Contrato',
-  workModel: 'Modalidade de Trabalho',
+  workModel: 'Disponibilidade de Modelo de Trabalho',
   curriculum: 'Currículo',
 }
 
@@ -71,7 +67,7 @@ const FIELD_PLACEHOLDERS: Record<string, string> = {
   phone: '(11) 99999-9999',
   location: 'São Paulo, SP',
   cep: '01001-000',
-  linkedinUsername: 'linkedin.com/in/seuperfil',
+  linkedinUsername: 'https://linkedin.com/in/seuperfil',
   referralEmail: 'colega@empresa.com',
   salaryExpectation: 'R$ 10.000,00',
 }
@@ -105,11 +101,10 @@ export function ApplicationFormWizard({
   initialFormStructure,
   isFavorited = false,
   onToggleFavorite,
-}: ApplicationFormWizardProps) {
+}: ApplicationFormProps) {
   const { user } = useAuth()
   const { profile, hydrate } = useProfileStore()
 
-  const [step, setStep] = useState<WizardStep>(1)
   const [formStructure, setFormStructure] = useState<ApplicationFormStructure | null>(
     initialFormStructure ?? null,
   )
@@ -123,6 +118,7 @@ export function ApplicationFormWizard({
 
   // Submission state
   const [submitting, setSubmitting] = useState(false)
+  const [isSubmitted, setIsSubmitted] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [copiedLink, setCopiedLink] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
@@ -187,13 +183,13 @@ export function ApplicationFormWizard({
     })
   }, [user, profile])
 
-  // Split dynamic fields from backend into wizard steps
+  // Split dynamic fields from backend
   const { contactFields, jobFields } = useMemo(() => {
     const fields = formStructure?.fields ?? [
-      { key: 'name', type: 'text', required: true, options: [] },
-      { key: 'email', type: 'email', required: true, options: [] },
-      { key: 'phone', type: 'tel', required: true, options: [] },
-      { key: 'privacyPolicyAccepted', type: 'boolean', required: true, options: [] },
+      { key: 'name', label: 'Nome completo', type: 'text', required: true, options: [] },
+      { key: 'email', label: 'E-mail', type: 'email', required: true, options: [] },
+      { key: 'phone', label: 'WhatsApp / Telefone', type: 'tel', required: true, options: [] },
+      { key: 'privacyPolicyAccepted', label: 'Termos de Privacidade', type: 'boolean', required: true, options: [] },
     ]
 
     const contact: ApplicationFormField[] = []
@@ -210,11 +206,11 @@ export function ApplicationFormWizard({
       }
     }
 
-    // Ensure name, email, phone exist in contact step as base requirements
+    // Ensure base contact fields are present
     const keysPresent = new Set(contact.map((f) => f.key))
-    if (!keysPresent.has('name')) contact.unshift({ key: 'name', type: 'text', required: true, options: [] })
-    if (!keysPresent.has('email')) contact.splice(1, 0, { key: 'email', type: 'email', required: true, options: [] })
-    if (!keysPresent.has('phone')) contact.splice(2, 0, { key: 'phone', type: 'tel', required: true, options: [] })
+    if (!keysPresent.has('name')) contact.unshift({ key: 'name', label: 'Nome completo', type: 'text', required: true, options: [] })
+    if (!keysPresent.has('email')) contact.splice(1, 0, { key: 'email', label: 'E-mail', type: 'email', required: true, options: [] })
+    if (!keysPresent.has('phone')) contact.splice(2, 0, { key: 'phone', label: 'WhatsApp / Telefone', type: 'tel', required: true, options: [] })
 
     return { contactFields: contact, jobFields: job }
   }, [formStructure])
@@ -247,9 +243,10 @@ export function ApplicationFormWizard({
     }
   }
 
-  // Validation handlers
-  const validateStep1 = (): boolean => {
+  // Full form validation matching InHire rules
+  const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {}
+
     for (const field of contactFields) {
       const val = (values[field.key] || '').trim()
       if (field.required && !val) {
@@ -258,54 +255,32 @@ export function ApplicationFormWizard({
         newErrors.email = 'E-mail inválido'
       }
     }
-    setErrors(newErrors)
-    return Object.keys(newErrors).length === 0
-  }
 
-  const validateStep2 = (): boolean => {
-    const newErrors: Record<string, string> = {}
     for (const field of jobFields) {
       const val = (values[field.key] || '').trim()
       if (field.required && !val) {
         newErrors[field.key] = `${field.label || FIELD_LABELS[field.key] || 'Este campo'} é obrigatório`
       }
     }
+
     for (const q of visibleQuestions) {
       const val = (values[q.id] || '').trim()
       if (q.required && !val) {
         newErrors[q.id] = 'Esta pergunta é obrigatória'
       }
     }
-    setErrors(newErrors)
-    return Object.keys(newErrors).length === 0
-  }
 
-  const validateStep3 = (): boolean => {
-    const newErrors: Record<string, string> = {}
     if (!privacyPolicyAccepted) {
-      newErrors.privacy = 'Você precisa aceitar os termos de privacidade para enviar'
+      newErrors.privacy = 'Você precisa aceitar os termos de privacidade para se candidatar'
     }
+
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
   }
 
-  const handleNext = () => {
-    setSubmitError(null)
-    if (step === 1) {
-      if (validateStep1()) setStep(2)
-    } else if (step === 2) {
-      if (validateStep2()) setStep(3)
-    }
-  }
-
-  const handleBack = () => {
-    setSubmitError(null)
-    setErrors({})
-    if (step > 1) setStep((prev) => (prev - 1) as WizardStep)
-  }
-
-  const handleSubmit = async () => {
-    if (!validateStep3()) return
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!validateForm()) return
 
     setSubmitting(true)
     setSubmitError(null)
@@ -332,7 +307,7 @@ export function ApplicationFormWizard({
       }
 
       await applyToJob(jobId, payload)
-      setStep(4)
+      setIsSubmitted(true)
     } catch (err) {
       setSubmitError(
         getApiErrorMessage(err, 'Não foi possível enviar sua candidatura. Tente novamente.'),
@@ -348,16 +323,7 @@ export function ApplicationFormWizard({
     setTimeout(() => setCopiedLink(false), 2000)
   }
 
-  const stepTitles: Record<WizardStep, string> = {
-    1: 'Identificação & Contato',
-    2: 'Expectativas & Fit',
-    3: 'Currículo & Envio',
-    4: 'Candidatura Concluída',
-  }
-
-  const progressPercent = step === 1 ? 33 : step === 2 ? 66 : 100
-
-  // Render a single dynamic form field from backend
+  // Render a single dynamic form field
   const renderDynamicField = (field: ApplicationFormField) => {
     const val = values[field.key] || ''
     const label = field.label || FIELD_LABELS[field.key] || field.key
@@ -454,7 +420,7 @@ export function ApplicationFormWizard({
     )
   }
 
-  // Render a dynamic diversity / vacancy question from backend
+  // Render a dynamic question
   const renderDynamicQuestion = (q: DiversityQuestion) => {
     const val = values[q.id] || ''
     const hasError = Boolean(errors[q.id])
@@ -501,9 +467,90 @@ export function ApplicationFormWizard({
     )
   }
 
+  // SUCCESS SCREEN
+  if (isSubmitted) {
+    return (
+      <Card className="overflow-hidden border border-border bg-card shadow-sm transition-all rounded-2xl p-6 text-center space-y-4 animate-in zoom-in-95 duration-200">
+        <div className="mx-auto grid size-12 place-items-center rounded-2xl bg-primary text-primary-foreground shadow-md animate-bounce duration-1000">
+          <CheckCircle2 className="size-7" />
+        </div>
+
+        <div>
+          <span className="inline-flex items-center rounded-full border border-primary/30 bg-primary/10 px-2.5 py-0.5 text-[10px] font-black text-primary">
+            CANDIDATURA ENVIADA
+          </span>
+          <h4 className="mt-2 text-lg font-black tracking-tight text-foreground">
+            Candidatura Concluída!
+          </h4>
+          <p className="mt-1.5 text-xs text-muted-foreground leading-relaxed">
+            Seus dados e currículo foram registrados para a vaga <strong className="text-foreground">{jobTitle}</strong> na empresa <strong className="text-foreground">{company}</strong>.
+          </p>
+        </div>
+
+        <div className="rounded-2xl border border-border bg-accent/20 p-3.5 text-left space-y-2">
+          <div className="flex items-center justify-between text-xs">
+            <span className="text-muted-foreground font-medium">Candidato:</span>
+            <span className="font-extrabold text-foreground">{values.name || user?.name}</span>
+          </div>
+          <div className="flex items-center justify-between text-xs">
+            <span className="text-muted-foreground font-medium">E-mail:</span>
+            <span className="font-bold text-foreground truncate max-w-[180px]">
+              {values.email || user?.email}
+            </span>
+          </div>
+          <div className="flex items-center justify-between text-xs">
+            <span className="text-muted-foreground font-medium">Currículo:</span>
+            <span className="font-extrabold text-foreground">
+              {resumeType === 'TAILORED' ? '⚡ Sob Medida (ATS)' : '📄 Padrão do Perfil'}
+            </span>
+          </div>
+        </div>
+
+        <div className="space-y-2 pt-1">
+          <Button
+            size="sm"
+            className="w-full h-10 rounded-xl text-xs font-black gap-2 bg-primary text-primary-foreground hover:bg-primary/90 shadow-2xs"
+            asChild
+          >
+            <a href={jobUrl} target="_blank" rel="noreferrer">
+              Ver Vaga Oficial no InHire <ExternalLink className="size-3.5" />
+            </a>
+          </Button>
+
+          <div className="grid grid-cols-2 gap-2">
+            {onToggleFavorite && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={onToggleFavorite}
+                className="h-10 rounded-xl text-xs font-bold gap-1.5 border-border bg-card hover:bg-accent"
+              >
+                <Bookmark className={cn('size-3.5', isFavorited && 'fill-primary text-primary')} />
+                {isFavorited ? 'Salva' : 'Salvar Vaga'}
+              </Button>
+            )}
+
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleCopyLink}
+              className="h-10 rounded-xl text-xs font-bold gap-1.5 border-border bg-card hover:bg-accent"
+            >
+              <Share2 className="size-3.5" />
+              {copiedLink ? 'Copiado!' : 'Compartilhar'}
+            </Button>
+          </div>
+        </div>
+      </Card>
+    )
+  }
+
+  // MAIN UNIFIED APPLICATION FORM
   return (
     <Card className="overflow-hidden border border-border bg-card shadow-sm transition-all rounded-2xl">
-      {/* Wizard Header */}
+      {/* Form Header */}
       <div className="border-b border-border bg-accent/15 p-5">
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
@@ -511,333 +558,230 @@ export function ApplicationFormWizard({
               <Briefcase className="size-3.5" />
             </span>
             <span className="text-[10px] font-extrabold tracking-wider uppercase text-foreground">
-              CANDIDATURA RÁPIDA
+              CANDIDATURA DIRETA
             </span>
           </div>
 
-          {step < 4 && (
-            <span className="inline-flex items-center rounded-full border border-primary/30 bg-primary/10 px-2.5 py-0.5 text-[10px] font-black text-primary">
-              Passo {step} de 3
-            </span>
-          )}
+          <span className="inline-flex items-center rounded-full border border-primary/30 bg-primary/10 px-2.5 py-0.5 text-[10px] font-black text-primary">
+            InHire Hub
+          </span>
         </div>
 
-        <div className="mt-3 flex items-center justify-between">
+        <div className="mt-3">
           <h3 className="text-base font-extrabold tracking-tight text-foreground">
-            {stepTitles[step]}
+            Formulário de Inscrição
           </h3>
-          {step < 4 && (
-            <span className="text-[11px] font-bold text-muted-foreground">
-              {progressPercent}%
-            </span>
-          )}
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Preencha os dados solicitados pela <strong>{company}</strong> para esta oportunidade.
+          </p>
         </div>
-
-        {/* Progress Bar */}
-        {step < 4 && (
-          <div className="mt-2.5 h-1.5 w-full overflow-hidden rounded-full bg-border/60">
-            <div
-              className="h-full bg-primary transition-all duration-300 ease-out"
-              style={{ width: `${progressPercent}%` }}
-            />
-          </div>
-        )}
       </div>
 
-      {/* Form Content */}
-      <div className="p-5">
+      {/* Form Body */}
+      <form onSubmit={handleSubmit} className="p-5 space-y-5">
         {submitError && (
           <div
             role="alert"
-            className="mb-4 rounded-xl border border-destructive/40 bg-destructive/10 p-3 text-xs font-semibold text-destructive flex items-start gap-2"
+            className="rounded-xl border border-destructive/40 bg-destructive/10 p-3 text-xs font-semibold text-destructive flex items-start gap-2"
           >
             <AlertCircle className="size-4 shrink-0 mt-0.5" />
             <span>{submitError}</span>
           </div>
         )}
 
-        {/* STEP 1: Identificação & Contato (campos dinâmicos do backend) */}
-        {step === 1 && (
-          <div className="space-y-4 animate-in fade-in duration-150">
-            {contactFields.map(renderDynamicField)}
+        {/* 1. SEÇÃO: DADOS PESSOAIS & CONTATO */}
+        <div className="space-y-3.5">
+          <div className="flex items-center gap-2 pb-1 border-b border-border/60">
+            <User className="size-3.5 text-primary" />
+            <h4 className="text-xs font-black uppercase tracking-wider text-foreground">
+              Informações Pessoais
+            </h4>
+          </div>
 
-            <Button
-              type="button"
-              onClick={handleNext}
-              className="mt-2 w-full h-11 rounded-xl font-extrabold text-xs bg-primary text-primary-foreground hover:bg-primary/90 shadow-2xs gap-2"
-            >
-              Próximo passo <ArrowRight className="size-4" />
-            </Button>
+          <div className="space-y-3">
+            {contactFields.map(renderDynamicField)}
+          </div>
+        </div>
+
+        {/* 2. SEÇÃO: EXPECTATIVAS & CONDIÇÕES DA VAGA */}
+        {jobFields.length > 0 && (
+          <div className="space-y-3.5 pt-1">
+            <div className="flex items-center gap-2 pb-1 border-b border-border/60">
+              <DollarSign className="size-3.5 text-primary" />
+              <h4 className="text-xs font-black uppercase tracking-wider text-foreground">
+                Condições & Expectativas
+              </h4>
+            </div>
+
+            <div className="space-y-3">
+              {jobFields.map(renderDynamicField)}
+            </div>
           </div>
         )}
 
-        {/* STEP 2: Expectativas & Perguntas da Vaga (campos dinâmicos do backend) */}
-        {step === 2 && (
-          <div className="space-y-4 animate-in fade-in duration-150">
-            {/* Dynamic Job Requirements Fields */}
-            {jobFields.length > 0 && <div className="space-y-3">{jobFields.map(renderDynamicField)}</div>}
+        {/* 3. SEÇÃO: PERGUNTAS ESPECÍFICAS DA VAGA & DIVERSIDADE */}
+        {visibleQuestions.length > 0 && (
+          <div className="space-y-3.5 pt-1">
+            <div className="flex items-center gap-2 pb-1 border-b border-border/60">
+              <Sparkles className="size-3.5 text-primary" />
+              <h4 className="text-xs font-black uppercase tracking-wider text-foreground">
+                Perguntas da Vaga
+              </h4>
+            </div>
 
-            {/* Dynamic Diversity / Vacancy Questions */}
-            {visibleQuestions.length > 0 && (
-              <div className="mt-2 space-y-3 rounded-2xl border border-border bg-accent/15 p-3.5">
-                <p className="text-[10px] font-black uppercase tracking-wider text-muted-foreground">
-                  Perguntas Específicas da Vaga
-                </p>
-                {visibleQuestions.map(renderDynamicQuestion)}
-              </div>
+            {formStructure?.diversityIntroductionHtml && (
+              <div
+                className="rounded-xl border border-border bg-accent/10 p-3 text-xs text-muted-foreground leading-relaxed"
+                dangerouslySetInnerHTML={{ __html: formStructure.diversityIntroductionHtml }}
+              />
             )}
 
-            {/* Optional Cover Note / Presentation */}
-            <div>
-              <Label htmlFor="applicant-note" className="text-xs font-bold text-foreground">
-                Mensagem de Apresentação (Opcional)
-              </Label>
-              <textarea
-                id="applicant-note"
-                value={coverNote}
-                onChange={(e) => setCoverNote(e.target.value)}
-                placeholder="Destaque seus pontos fortes e por que você quer trabalhar nesta oportunidade…"
-                rows={3}
-                className="mt-1.5 w-full rounded-xl border border-input bg-background p-3 text-xs text-foreground placeholder:text-muted-foreground outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-ring/25 resize-none"
-              />
-            </div>
-
-            <div className="flex items-center gap-2 pt-1">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleBack}
-                className="h-11 flex-1 rounded-xl text-xs font-bold gap-1.5 border-border bg-card hover:bg-accent"
-              >
-                <ArrowLeft className="size-4" /> Voltar
-              </Button>
-              <Button
-                type="button"
-                onClick={handleNext}
-                className="h-11 flex-1 rounded-xl text-xs font-extrabold gap-1.5 bg-primary text-primary-foreground hover:bg-primary/90 shadow-2xs"
-              >
-                Próximo <ArrowRight className="size-4" />
-              </Button>
+            <div className="space-y-3">
+              {visibleQuestions.map(renderDynamicQuestion)}
             </div>
           </div>
         )}
 
-        {/* STEP 3: Currículo & Envio */}
-        {step === 3 && (
-          <div className="space-y-4 animate-in fade-in duration-150">
-            <div>
-              <Label className="text-xs font-bold text-foreground">
-                Selecione o Currículo para esta vaga
-              </Label>
-              <div className="mt-2 space-y-2.5">
-                {/* 1. Tailored Resume Option */}
-                <div
-                  role="button"
-                  tabIndex={0}
-                  onClick={() => setResumeType('TAILORED')}
-                  onKeyDown={(e) => e.key === 'Enter' && setResumeType('TAILORED')}
-                  className={cn(
-                    'cursor-pointer rounded-2xl border p-3.5 transition-all flex items-start gap-3 text-left',
-                    resumeType === 'TAILORED'
-                      ? 'border-primary bg-primary/10 shadow-2xs'
-                      : 'border-border bg-background hover:bg-accent/40',
-                  )}
-                >
-                  <div className="mt-0.5 grid size-8 shrink-0 place-items-center rounded-xl bg-primary text-primary-foreground font-black">
-                    <Sparkles className="size-4" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between gap-1">
-                      <p className="text-xs font-extrabold text-foreground">Currículo Sob Medida (ATS)</p>
-                      {tailoredResume ? (
-                        <span className="text-[10px] font-black text-primary bg-primary/20 border border-primary/30 px-2 py-0.5 rounded-full flex items-center gap-1">
-                          <Check className="size-2.5" /> Pronto
-                        </span>
-                      ) : (
-                        <span className="text-[10px] font-bold text-muted-foreground bg-accent px-2 py-0.5 rounded-full">
-                          IA Gerado
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-[11px] text-muted-foreground mt-1 leading-relaxed">
-                      Currículo otimizado com palavras-chave e match para esta vaga de {jobTitle}.
-                    </p>
-                  </div>
-                </div>
+        {/* 4. SEÇÃO: CURRÍCULO */}
+        <div className="space-y-3.5 pt-1">
+          <div className="flex items-center gap-2 pb-1 border-b border-border/60">
+            <FileText className="size-3.5 text-primary" />
+            <h4 className="text-xs font-black uppercase tracking-wider text-foreground">
+              Currículo
+            </h4>
+          </div>
 
-                {/* 2. Profile Standard Option */}
-                <div
-                  role="button"
-                  tabIndex={0}
-                  onClick={() => setResumeType('PROFILE')}
-                  onKeyDown={(e) => e.key === 'Enter' && setResumeType('PROFILE')}
-                  className={cn(
-                    'cursor-pointer rounded-2xl border p-3.5 transition-all flex items-start gap-3 text-left',
-                    resumeType === 'PROFILE'
-                      ? 'border-primary bg-primary/10 shadow-2xs'
-                      : 'border-border bg-background hover:bg-accent/40',
-                  )}
-                >
-                  <div className="mt-0.5 grid size-8 shrink-0 place-items-center rounded-xl bg-accent text-foreground font-black">
-                    <FileText className="size-4" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-extrabold text-foreground">Currículo Padrão do Perfil</p>
-                    <p className="text-[11px] text-muted-foreground mt-1 leading-relaxed">
-                      Envia seu histórico profissional cadastrado no InHire Hub.
-                    </p>
-                  </div>
-                </div>
+          <div className="space-y-2.5">
+            {/* Tailored Resume Option */}
+            <div
+              role="button"
+              tabIndex={0}
+              onClick={() => setResumeType('TAILORED')}
+              onKeyDown={(e) => e.key === 'Enter' && setResumeType('TAILORED')}
+              className={cn(
+                'cursor-pointer rounded-2xl border p-3.5 transition-all flex items-start gap-3 text-left',
+                resumeType === 'TAILORED'
+                  ? 'border-primary bg-primary/10 shadow-2xs'
+                  : 'border-border bg-background hover:bg-accent/40',
+              )}
+            >
+              <div className="mt-0.5 grid size-8 shrink-0 place-items-center rounded-xl bg-primary text-primary-foreground font-black">
+                <Sparkles className="size-4" />
               </div>
-            </div>
-
-            {/* Privacy Acceptance */}
-            <div className="rounded-2xl border border-border bg-accent/15 p-3.5">
-              <label className="flex items-start gap-2.5 cursor-pointer text-left">
-                <input
-                  type="checkbox"
-                  checked={privacyPolicyAccepted}
-                  onChange={(e) => setPrivacyPolicyAccepted(e.target.checked)}
-                  className="mt-0.5 size-4 rounded accent-primary text-primary focus:ring-primary"
-                />
-                <span className="text-[11px] leading-relaxed text-muted-foreground">
-                  Concordo com o compartilhamento dos meus dados para avaliação do processo seletivo da vaga em{' '}
-                  <strong className="text-foreground">{company}</strong> de acordo com a LGPD e{' '}
-                  {formStructure?.privacyPolicyUrl ? (
-                    <a
-                      href={formStructure.privacyPolicyUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="text-primary underline font-bold"
-                    >
-                      política de privacidade da vaga
-                    </a>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between gap-1">
+                  <p className="text-xs font-extrabold text-foreground">Currículo Sob Medida (ATS)</p>
+                  {tailoredResume ? (
+                    <span className="text-[10px] font-black text-primary bg-primary/20 border border-primary/30 px-2 py-0.5 rounded-full flex items-center gap-1">
+                      <Check className="size-2.5" /> Pronto
+                    </span>
                   ) : (
-                    'termos da InHire'
+                    <span className="text-[10px] font-bold text-muted-foreground bg-accent px-2 py-0.5 rounded-full">
+                      IA Gerado
+                    </span>
                   )}
-                  .
-                </span>
-              </label>
-              {errors.privacy && <p className="mt-1.5 text-[11px] text-destructive font-semibold">{errors.privacy}</p>}
+                </div>
+                <p className="text-[11px] text-muted-foreground mt-1 leading-relaxed">
+                  Otimizado com palavras-chave e compatibilidade ATS para {jobTitle}.
+                </p>
+              </div>
             </div>
 
-            <div className="flex items-center gap-2 pt-1">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleBack}
-                disabled={submitting}
-                className="h-11 flex-1 rounded-xl text-xs font-bold gap-1.5 border-border bg-card hover:bg-accent"
-              >
-                <ArrowLeft className="size-4" /> Voltar
-              </Button>
-              <Button
-                type="button"
-                onClick={handleSubmit}
-                disabled={submitting}
-                className="h-11 flex-1 rounded-xl text-xs font-black gap-2 bg-primary text-primary-foreground hover:bg-primary/90 shadow-2xs"
-              >
-                {submitting ? (
-                  <>
-                    <Loader2 className="size-4 animate-spin" /> Enviando…
-                  </>
-                ) : (
-                  <>
-                    <Send className="size-4" /> Concluir Candidatura
-                  </>
-                )}
-              </Button>
+            {/* Profile Standard Option */}
+            <div
+              role="button"
+              tabIndex={0}
+              onClick={() => setResumeType('PROFILE')}
+              onKeyDown={(e) => e.key === 'Enter' && setResumeType('PROFILE')}
+              className={cn(
+                'cursor-pointer rounded-2xl border p-3.5 transition-all flex items-start gap-3 text-left',
+                resumeType === 'PROFILE'
+                  ? 'border-primary bg-primary/10 shadow-2xs'
+                  : 'border-border bg-background hover:bg-accent/40',
+              )}
+            >
+              <div className="mt-0.5 grid size-8 shrink-0 place-items-center rounded-xl bg-accent text-foreground font-black">
+                <FileText className="size-4" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-extrabold text-foreground">Currículo Padrão do Perfil</p>
+                <p className="text-[11px] text-muted-foreground mt-1 leading-relaxed">
+                  Envia os dados profissionais cadastrados no seu perfil InHire.
+                </p>
+              </div>
             </div>
           </div>
-        )}
+        </div>
 
-        {/* STEP 4: Conclusão & Sucesso */}
-        {step === 4 && (
-          <div className="text-center py-2 space-y-4 animate-in zoom-in-95 duration-200">
-            <div className="mx-auto grid size-12 place-items-center rounded-2xl bg-primary text-primary-foreground shadow-md animate-bounce duration-1000">
-              <CheckCircle2 className="size-7" />
-            </div>
+        {/* 5. SEÇÃO: APRESENTAÇÃO (OPCIONAL) */}
+        <div className="pt-1">
+          <Label htmlFor="applicant-cover-note" className="text-xs font-bold text-foreground">
+            Mensagem de Apresentação (Opcional)
+          </Label>
+          <textarea
+            id="applicant-cover-note"
+            value={coverNote}
+            onChange={(e) => setCoverNote(e.target.value)}
+            placeholder="Destaque seus pontos fortes e por que tem interesse nesta oportunidade…"
+            rows={3}
+            className="mt-1.5 w-full rounded-xl border border-input bg-background p-3 text-xs text-foreground placeholder:text-muted-foreground outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-ring/25 resize-none"
+          />
+        </div>
 
-            <div>
-              <span className="inline-flex items-center rounded-full border border-primary/30 bg-primary/10 px-2.5 py-0.5 text-[10px] font-black text-primary">
-                CANDIDATURA ENVIADA
-              </span>
-              <h4 className="mt-2 text-lg font-black tracking-tight text-foreground">
-                Candidatura Concluída!
-              </h4>
-              <p className="mt-1.5 text-xs text-muted-foreground leading-relaxed">
-                Seus dados e currículo foram registrados para a vaga <strong className="text-foreground">{jobTitle}</strong> na empresa <strong className="text-foreground">{company}</strong>.
-              </p>
-            </div>
-
-            <div className="rounded-2xl border border-border bg-accent/20 p-3.5 text-left space-y-2">
-              <div className="flex items-center justify-between text-xs">
-                <span className="text-muted-foreground font-medium">Candidato:</span>
-                <span className="font-extrabold text-foreground">{values.name || user?.name}</span>
-              </div>
-              <div className="flex items-center justify-between text-xs">
-                <span className="text-muted-foreground font-medium">E-mail:</span>
-                <span className="font-bold text-foreground truncate max-w-[180px]">
-                  {values.email || user?.email}
-                </span>
-              </div>
-              <div className="flex items-center justify-between text-xs">
-                <span className="text-muted-foreground font-medium">Currículo:</span>
-                <span className="font-extrabold text-foreground">
-                  {resumeType === 'TAILORED' ? '⚡ Sob Medida (ATS)' : '📄 Padrão do Perfil'}
-                </span>
-              </div>
-            </div>
-
-            <div className="space-y-2 pt-1">
-              <Button
-                size="sm"
-                className="w-full h-10 rounded-xl text-xs font-black gap-2 bg-primary text-primary-foreground hover:bg-primary/90 shadow-2xs"
-                asChild
-              >
-                <a href={jobUrl} target="_blank" rel="noreferrer">
-                  Ver Vaga Oficial no InHire <ExternalLink className="size-3.5" />
-                </a>
-              </Button>
-
-              <div className="grid grid-cols-2 gap-2">
-                {onToggleFavorite && (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={onToggleFavorite}
-                    className="h-10 rounded-xl text-xs font-bold gap-1.5 border-border bg-card hover:bg-accent"
-                  >
-                    <Bookmark className={cn('size-3.5', isFavorited && 'fill-primary text-primary')} />
-                    {isFavorited ? 'Salva' : 'Salvar Vaga'}
-                  </Button>
-                )}
-
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={handleCopyLink}
-                  className="h-10 rounded-xl text-xs font-bold gap-1.5 border-border bg-card hover:bg-accent"
+        {/* 6. SEÇÃO: PRIVACIDADE & LGPD */}
+        <div className="rounded-2xl border border-border bg-accent/15 p-3.5">
+          <label className="flex items-start gap-2.5 cursor-pointer text-left">
+            <input
+              type="checkbox"
+              checked={privacyPolicyAccepted}
+              onChange={(e) => setPrivacyPolicyAccepted(e.target.checked)}
+              className="mt-0.5 size-4 rounded accent-primary text-primary focus:ring-primary"
+            />
+            <span className="text-[11px] leading-relaxed text-muted-foreground">
+              Concordo com o compartilhamento e tratamento dos meus dados pessoais para o processo seletivo da vaga em{' '}
+              <strong className="text-foreground">{company}</strong> de acordo com a LGPD e{' '}
+              {formStructure?.privacyPolicyUrl ? (
+                <a
+                  href={formStructure.privacyPolicyUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-primary underline font-bold"
                 >
-                  <Share2 className="size-3.5" />
-                  {copiedLink ? 'Copiado!' : 'Compartilhar'}
-                </Button>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
+                  política de privacidade da vaga
+                </a>
+              ) : (
+                'termos da InHire'
+              )}
+              .
+            </span>
+          </label>
+          {errors.privacy && <p className="mt-1.5 text-[11px] text-destructive font-semibold">{errors.privacy}</p>}
+        </div>
+
+        {/* SUBMIT BUTTON */}
+        <Button
+          type="submit"
+          disabled={submitting}
+          className="w-full h-12 rounded-xl text-sm font-black gap-2 bg-primary text-primary-foreground hover:bg-primary/90 shadow-2xs transition-all"
+        >
+          {submitting ? (
+            <>
+              <Loader2 className="size-4 animate-spin" /> Enviando Candidatura…
+            </>
+          ) : (
+            <>
+              <Send className="size-4" /> Enviar Candidatura
+            </>
+          )}
+        </Button>
+      </form>
 
       {/* Footer Disclaimer */}
-      {step < 4 && (
-        <div className="border-t border-border bg-accent/10 px-5 py-3 text-center">
-          <p className="flex items-center justify-center gap-1.5 text-[10px] font-bold text-muted-foreground">
-            <ShieldCheck className="size-3.5 text-primary" /> Candidatura direta e dinâmica via InHire Hub
-          </p>
-        </div>
-      )}
+      <div className="border-t border-border bg-accent/10 px-5 py-3 text-center">
+        <p className="flex items-center justify-center gap-1.5 text-[10px] font-bold text-muted-foreground">
+          <ShieldCheck className="size-3.5 text-primary" /> Candidatura direta e integrada via InHire Hub
+        </p>
+      </div>
     </Card>
   )
 }
