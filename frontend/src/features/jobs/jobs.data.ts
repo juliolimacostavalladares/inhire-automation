@@ -17,6 +17,7 @@ export interface Job {
   requirements: string[]
   url: string
   status?: 'PUBLISHED' | 'CLOSED'
+  applicationForm?: unknown
 }
 
 export const jobs: Job[] = [
