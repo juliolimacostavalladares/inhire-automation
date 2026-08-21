@@ -49,6 +49,31 @@ export class DiscoverTenantsUseCase {
           success++;
           return;
         }
+
+        const openJobs = page.jobsPage?.filter(
+          (job) => job.jobId && (!job.status || job.status.toLowerCase() === 'published'),
+        ) ?? [];
+
+        // Tenants sem vagas abertas NÃO devem ser cadastrados/ativados
+        if (openJobs.length === 0) {
+          const existing = await this.prisma.tenant.findUnique({
+            where: { slug },
+            select: { id: true },
+          });
+          if (existing) {
+            await this.prisma.tenant.update({
+              where: { id: existing.id },
+              data: { active: false, lastValidatedAt: new Date() },
+            });
+          }
+          await this.prisma.crawlRunItem.update({
+            where: { id: runItem.id },
+            data: { status: 'SUCCEEDED' },
+          });
+          success++;
+          return;
+        }
+
         const existing = await this.prisma.tenant.findUnique({
           where: { slug },
           select: { id: true },
@@ -60,11 +85,13 @@ export class DiscoverTenantsUseCase {
             name: page.tenantName || slug,
             logoUrl: page.logo || null,
             origin: items[0]?.source ?? TenantOrigin.WAYBACK,
+            active: true,
             lastValidatedAt: new Date(),
           },
           update: {
             name: page.tenantName || slug,
             ...(page.logo ? { logoUrl: page.logo } : {}),
+            active: true,
             lastValidatedAt: new Date(),
           },
         });
